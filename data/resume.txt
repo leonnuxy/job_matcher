@@ -1,0 +1,51 @@
+Noel Ugwoke
+Calgary, Alberta | LinkedIn | GitHub
+
+SKILLS
+- Languages & Paradigms: Java 11/17, JavaScript (ES6+), Python 3, ksh/bash
+- Build & Artefacts: Gradle, Maven, NPM, JFrog Artifactory
+- Source Control: GitHub (monorepo), Bitbucket, Git Flow
+- CI/CD: GitHub Actions, Jenkins multibranch, CodePipeline
+- DX & Quality: Backstage catalogs, Moderne/Open Rewrite, SonarQube, unit/integration tests
+- Methodologies: Agile/Scrum, SDLC, TDD, RCA, metrics dashboards (Prometheus/Grafana)
+- Containers & Infra: Docker, Kubernetes (EKS), Terraform, Linux (RHEL/Ubuntu)
+
+EXPERIENCE
+
+Software Engineer (DevOps)
+APEGA | Calgary, AB | Dec 2022 - Dec 2024
+- Led migration of 30+ Java microservices from Maven to Gradle and on-prem Bitbucket to GitHub mono repo; reduced build times by 35%
+- Authored reusable GitHub Actions workflows (build, test, publish to JFrog Artifactory); increased release frequency from weekly to daily
+- Unified JavaScript builds with NPM/Yarn and Webpack; reduced node module drift incidents by 40%
+- Embedded Moderne/Open Rewrite into pipelines to enforce code hygiene and automated refactors
+- Monitored pipeline KPIs in Grafana, enabling data-driven tuning that cut failed build rate by 25%
+Skills & Tools: Gradle, GitHub Actions, Artifactory, Python, ksh, Docker, Kubernetes
+
+Associate Software Developer – WebApps
+Spartan Controls | Calgary, AB | Jul 2021 - Nov 2022
+- Designed Spring Boot & Python services ingesting 2M telemetry events/day; incorporated Kafka and Spark Streaming to scale horizontally with <60s end-to-end SLAs
+- Implemented AI-based anomaly detection (scikit-learn isolation forest) with 88% precision in fault detection, reducing unplanned downtime by 15%
+- Containerized stack in Docker; CI/CD via Jenkins and CodePipeline enabled daily releases with <1% rollback
+Skills & Tools: Django, Python, TypeScript, Docker, Git
+
+Cloud and Data Analyst - DevOps
+Parkland Fuel Corporation | Calgary, AB | May 2020 - Jan 2021
+- Built Python ETL feeding Django APIs for real-time retail dashboards; reduced data refresh time by 50%
+Skills & Tools: Python, Django, Vue.js, REST, SQL
+
+PROJECTS
+
+Canadian Optimization Pipeline – Spartan Controls | 2022
+- Developed Terraform + Jenkins workflow automating CDN configuration, reducing manual changes by 50% and improving cache hit rate by 12%
+Skills & Tools: Python, Terraform, AWS, Docker, Kubernetes
+
+EDUCATION & CERTIFICATIONS
+
+BSc. Computer Science
+University of Calgary | 2016 - 2022
+
+AWS Certified Cloud Practitioner
+Amazon Web Services | Jan 2023
+
+Google Cloud Professional Developer
+Google Cloud | 2023 - 2026

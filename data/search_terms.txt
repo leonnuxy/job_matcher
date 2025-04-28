@@ -1,0 +1,8 @@
+# List your job search queries, one per line.
+# You can include a location, or leave it blank for a broader search.
+Python developer Calgary
+Data engineer Toronto
+DevOps engineer Canada
+Machine learning engineer Canada
+Software engineer Canada
+Backend developer Canada
