@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 from lib import matcher
 
 class TestMatcherFunctions(unittest.TestCase):
