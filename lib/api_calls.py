@@ -1,23 +1,86 @@
+import os
+import re
 import logging
-import requests
+from datetime import datetime, timedelta
+import google.generativeai as genai
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+# Import API keys from config
 from config import API_KEY, CSE_ID, GEMINI_API_KEY
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def search_jobs(query, api_key=None, cse_id=None, max_age_hours=None):
+def extract_location_from_snippet(snippet, search_term):
     """
-    Search for jobs using Google Custom Search Engine (CSE).
-    Optionally filter results to those published within max_age_hours.
-    Returns a list of dicts with 'title', 'link', and 'snippet'.
-    Logs errors and returns an empty list on failure.
+    Extract location information from job snippets or search terms.
+    
+    Args:
+        snippet (str): The job snippet text
+        search_term (str): The original search term which may contain location
+        
+    Returns:
+        str: The extracted location or None if not found
     """
-    api_key = api_key or API_KEY
-    cse_id = cse_id or CSE_ID
+    # First, try to extract location from search term (e.g., "Python developer Calgary")
+    search_parts = search_term.split()
+    if len(search_parts) > 1 and search_parts[-1].lower() not in ["jobs", "developer", "engineer", "position"]:
+        possible_location = search_parts[-1]
+        return possible_location
+        
+    # Try to extract location info from the snippet
+    # Common location patterns in job snippets
+    location_patterns = [
+        r'in\s+([A-Za-z\s]+),\s+([A-Za-z\s]+)', # "in Calgary, Alberta"
+        r'location[:\s]+([A-Za-z\s,]+)', # "Location: Calgary"
+        r'([A-Za-z]+),\s+([A-Za-z]{2})', # "Calgary, AB"
+        r'([A-Za-z\s]+)\s+([A-Za-z]{2})\s+([A-Za-z0-9]+)', # "Calgary AB T2P"
+    ]
+    
+    for pattern in location_patterns:
+        matches = re.search(pattern, snippet, re.IGNORECASE)
+        if matches:
+            return matches.group(0).strip()
+    
+    return None
+
+def extract_company_from_title(title):
+    """
+    Extract company name from job title if possible.
+    
+    Args:
+        title (str): The job title text
+        
+    Returns:
+        str: The extracted company name or None if not found
+    """
+    # Common patterns for company names in titles
+    company_patterns = [
+        r'at\s+([A-Za-z0-9\s&]+)', # "at Company Name"
+        r'hiring .+ at\s+([A-Za-z0-9\s&]+)', # "hiring ... at Company Name"
+        r'([A-Za-z0-9\s&]+)\s+\|\s+LinkedIn', # "Company Name | LinkedIn"
+        r'([A-Za-z0-9\s&]+)\s+hiring', # "Company Name hiring"
+    ]
+    
+    for pattern in company_patterns:
+        matches = re.search(pattern, title, re.IGNORECASE)
+        if matches:
+            company = matches.group(1).strip()
+            # Clean up common unwanted suffixes
+            company = re.sub(r'\s*\|\s*LinkedIn$', '', company)
+            return company
+    
+    return None
+
+def search_jobs(search_term, max_results=10, max_age_hours=24):
+    """Search for job listings using Google Custom Search API."""
+    api_key = API_KEY
+    cse_id = CSE_ID
     try:
         service = build("customsearch", "v1", developerKey=api_key)
         # Add dateRestrict if max_age_hours is set
-        params = {'q': query, 'cx': cse_id, 'num': 10}
+        params = {'q': search_term, 'cx': cse_id, 'num': max_results}
         if max_age_hours:
             # Google CSE supports dateRestrict in days only
             days = max(1, int(max_age_hours // 24))
@@ -26,10 +89,18 @@ def search_jobs(query, api_key=None, cse_id=None, max_age_hours=None):
         items = res.get('items', [])
         results = []
         for item in items:
+            # Extract location from search term or snippet
+            location = extract_location_from_snippet(item.get('snippet', ''), search_term)
+            
+            # Extract company name from title if possible
+            company = extract_company_from_title(item.get('title', ''))
+            
             results.append({
                 'title': item.get('title', ''),
                 'link': item.get('link', ''),
-                'snippet': item.get('snippet', '')
+                'snippet': item.get('snippet', ''),
+                'location': location,
+                'company': company
             })
         return results
     except HttpError as e:
@@ -41,28 +112,52 @@ def search_jobs(query, api_key=None, cse_id=None, max_age_hours=None):
 
 def optimize_resume_with_gemini(resume_text, job_description):
     """
-    Calls Google Gemini API to optimize the resume based on the job description.
-    Returns the optimized resume or suggestions as a string.
+    Use Google's Gemini AI to optimize a resume for a specific job description.
+    
+    Args:
+        resume_text (str): The text content of the resume
+        job_description (str): The text content of the job description
+        
+    Returns:
+        str: Optimization suggestions for the resume
     """
     try:
-        endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-        headers = {"Content-Type": "application/json"}
-        prompt = (
-            "You are an expert career coach and resume writer. "
-            "Given the following resume and job description, suggest improvements to the resume to better match the job. "
-            "Return the improved resume or a list of specific suggestions.\n"
-            f"Resume:\n{resume_text}\nJob Description:\n{job_description}"
-        )
-        data = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.7, "maxOutputTokens": 1024}
-        }
-        params = {"key": GEMINI_API_KEY}
-        response = requests.post(endpoint, headers=headers, params=params, json=data, timeout=30)
-        response.raise_for_status()
-        result = response.json()
-        # Extract the generated text from Gemini's response
-        return result['candidates'][0]['content']['parts'][0]['text']
+        # Configure the Gemini API
+        genai.configure(api_key=GEMINI_API_KEY)
+        
+        # Use a model we know exists from our previous test
+        model_name = "models/gemini-1.5-flash"
+        logging.info(f"Using Gemini model: {model_name}")
+        
+        model = genai.GenerativeModel(model_name)
+        
+        # Create the prompt
+        prompt = f"""
+        As an expert resume optimizer, analyze the resume and job description below.
+        Provide specific, actionable suggestions to improve the resume to better match the job requirements.
+        Focus on:
+        1. Skills alignment - identify missing skills that should be highlighted
+        2. Experience framing - how to better present existing experience
+        3. Keywords optimization - specific terms to include
+        4. Formatting suggestions - if applicable
+        
+        RESUME:
+        {resume_text}
+        
+        JOB DESCRIPTION:
+        {job_description}
+        
+        Provide your response as a structured list of suggestions with clear, specific changes.
+        """
+        
+        # Generate content with minimal configuration
+        response = model.generate_content(prompt)
+        
+        # Log success
+        logging.info("Resume optimization completed successfully")
+        
+        return response.text
+        
     except Exception as e:
-        logging.error(f"Gemini API error: {e}")
-        return "[Error: Could not optimize resume with Gemini AI.]"
+        logging.error(f"Error optimizing resume with Gemini: {e}")
+        return f"Resume optimization failed: {str(e)}"

@@ -1,0 +1,29 @@
+
+Software Developer - Remote
+TechInnovate Solutions
+
+Job Description:
+We are seeking a skilled Software Developer to join our growing team. The ideal candidate will be responsible for developing and maintaining web applications, designing database schemas, and collaborating with cross-functional teams.
+
+Requirements:
+- 3+ years of experience in software development
+- Proficiency in Python and JavaScript
+- Experience with web frameworks such as Django or Flask
+- Strong knowledge of SQL databases (PostgreSQL preferred)
+- Familiarity with AWS cloud services
+- Experience with version control systems (Git)
+- Excellent problem-solving abilities
+
+Responsibilities:
+- Develop and maintain web applications
+- Write clean, maintainable, and efficient code
+- Collaborate with front-end developers and other team members
+- Troubleshoot and debug applications
+- Implement security and data protection measures
+
+Benefits:
+- Competitive salary
+- Remote work options
+- Health insurance
+- 401(k) matching
+- Professional development opportunities

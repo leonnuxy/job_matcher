@@ -1,6 +1,8 @@
+Noel Ugwoke (Modified Version)
+Calgary, Alberta | LinkedIn | GitHub (Modified Version)
 
 SKILLS
-- Languages & Paradigms: Java 11/17, JavaScript (ES6+), Python, ksh/bash
+- Languages & Paradigms: Java 11/17, JavaScript (ES6+), Python 3, ksh/bash
 - Build & Artefacts: Gradle, Maven, NPM, JFrog Artifactory
 - Source Control: GitHub (monorepo), Bitbucket, Git Flow
 - CI/CD: GitHub Actions, Jenkins multibranch, CodePipeline
@@ -47,3 +49,8 @@ Amazon Web Services | Jan 2023
 
 Google Cloud Professional Developer
 Google Cloud | 2023 - 2026
+
+ADDITIONAL SKILLS (Modified Version)
+- Advanced data visualization
+- Project management experience
+- Experience with agile methodologies

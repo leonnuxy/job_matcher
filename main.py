@@ -1,8 +1,9 @@
 # main.py
 import os
-import json  # Add JSON import
+import json
 import logging
-from lib import api_calls, scraper, resume_parser, job_parser, matcher, ats
+import re
+from lib import api_calls, scraper, resume_parser, job_parser_enhanced as job_parser, matcher, ats
 # Comment out database imports for now
 # from lib.database import get_db_connection, create_results_table, save_job_result
 from config import API_KEY, CSE_ID
@@ -74,6 +75,27 @@ def main():
                 job_description = job_parser.extract_job_description(full_job_text)
                 job_requirements = job_parser.extract_job_requirements(job_description)
                 
+                # If the result has a URL and we don't have good location data, try to scrape more details
+                job_url = result.get('link')
+                if job_url and (not result.get('location') or not result.get('company')):
+                    try:
+                        logging.info(f"Fetching additional details from job URL: {job_url}")
+                        job_details = scraper.extract_job_details(job_url)
+                        
+                        # Update result with any additional information found
+                        if job_details.get('location'):
+                            result['location'] = job_details.get('location')
+                            
+                        if job_details.get('company') and not result.get('company'):
+                            result['company'] = job_details.get('company')
+                            
+                        if job_details.get('description') and len(job_description) < len(job_details.get('description')):
+                            job_description = job_details.get('description')
+                            # Re-extract requirements with better description
+                            job_requirements = job_parser.extract_job_requirements(job_description)
+                    except Exception as e:
+                        logging.warning(f"Failed to fetch additional job details: {e}")
+                
                 # Use the consistent ATS calculation logic
                 similarity_score = ats.calculate_similarity_simple(resume_skills, job_requirements)
                 ats_score = ats.simulate_ats_analysis(resume_text, job_description, similarity_score)
@@ -85,11 +107,28 @@ def main():
                     # Store optimization suggestions
                     result['resume_optimization'] = optimized_resume
                 
-                # Prepare job data 
+                # Prepare job data
+                # Extract location using multiple methods, prioritizing the most reliable source
+                location = result.get('location')  # First try location directly from API results
+                
+                if not location:
+                    # Try to extract from job description
+                    location = job_parser.extract_job_location(job_description)
+                
+                if not location:
+                    # Try to extract from snippet
+                    location = job_parser.extract_job_location(full_job_text)
+                    
+                if not location:
+                    # Last resort: use the location from search keyword if it has one
+                    search_parts = keyword.split()
+                    if len(search_parts) > 1:
+                        location = search_parts[-1]  # Assume last word might be location
+                
                 job_data = {
                     'title': result.get('title'),
                     'company': result.get('company'), 
-                    'location': result.get('location'),
+                    'location': location,
                     'url': result.get('link'),
                     'ats_score': ats_score,
                     'similarity_score': similarity_score,

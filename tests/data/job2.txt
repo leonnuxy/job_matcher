@@ -1,0 +1,29 @@
+
+Data Scientist - Hybrid
+Data Analytics Pro
+
+Job Description:
+We are looking for a Data Scientist to help us discover insights from data and build prediction models. The ideal candidate should have a strong background in statistics, machine learning, and data manipulation.
+
+Requirements:
+- Bachelor's degree in Computer Science, Statistics, or related field
+- 2+ years of experience in data science or related field
+- Proficiency in Python, R, or similar programming languages
+- Experience with data visualization tools (Tableau, PowerBI)
+- Knowledge of SQL and database systems
+- Experience with machine learning algorithms and libraries
+- Strong analytical and problem-solving skills
+
+Responsibilities:
+- Analyze large datasets to identify trends and patterns
+- Build and deploy machine learning models
+- Create data visualizations and dashboards
+- Collaborate with product and engineering teams
+- Present findings to stakeholders
+
+Benefits:
+- Competitive compensation
+- Flexible work schedule
+- Health and dental insurance
+- Continuous learning opportunities
+- Modern office environment

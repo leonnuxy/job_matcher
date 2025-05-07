@@ -1,8 +1,12 @@
 # List your job search queries, one per line.
 # You can include a location, or leave it blank for a broader search.
 Python developer Calgary
-Data engineer Toronto
-DevOps engineer Canada
-Machine learning engineer Canada
-Software engineer Canada
-Backend developer Canada
+DevOps engineer Edmonton
+Cloud architect Toronto
+Machine learning engineer Vancouver
+Software engineer Remote
+Backend developer Montreal
+Data scientist Winnipeg
+UX/UI designer Ottawa
+Technical writer Victoria
+Mobile app developer Halifax

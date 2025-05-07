@@ -1,0 +1,19 @@
+
+<div class="job-description">
+    <h2>Full Stack Developer</h2>
+    <p>XYZ Corporation is seeking a talented Full Stack Developer to join our team.</p>
+    <h3>Requirements:</h3>
+    <ul>
+        <li>5+ years of experience with JavaScript, React, and Node.js</li>
+        <li>Experience with database design and SQL/NoSQL databases</li>
+        <li>Knowledge of cloud platforms (AWS, Azure, or GCP)</li>
+        <li>Strong problem-solving skills and attention to detail</li>
+    </ul>
+    <h3>Responsibilities:</h3>
+    <ul>
+        <li>Design and develop user-facing features</li>
+        <li>Build reusable code and libraries for future use</li>
+        <li>Optimize applications for maximum speed and scalability</li>
+    </ul>
+</div>
+        

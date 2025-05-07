@@ -1,17 +1,17 @@
 # lib/matcher.py
+import logging
+from lib import api_calls
+
 def calculate_similarity(resume_skills, job_skills):
     """
-    Calculates the similarity percentage between resume skills and job requirements.
-
-    Normalizes skills to lowercase and strips whitespace before comparison.
-
+    Calculate similarity score between resume skills and job skills.
+    
     Args:
-        resume_skills (list): List of skills extracted from the resume.
-        job_skills (list): List of skills extracted from the job description.
-
+        resume_skills (list): List of skills extracted from the resume
+        job_skills (list): List of skills extracted from the job description
+        
     Returns:
-        float: Similarity percentage (0-100), rounded to two decimal places.  Returns 0 if
-               job_skills is empty to avoid division by zero.
+        float: Percentage score representing the match
     """
     print("Calculating similarity")
 
@@ -29,40 +29,22 @@ def calculate_similarity(resume_skills, job_skills):
     return round(similarity_percentage, 2)
 
 
-def adjust_resume(resume_text, job_keywords, ai_api_key=None):
+def adjust_resume(resume_skills, job_skills):
     """
-    Suggests improvements to the resume based on missing job requirements.
-
-    If ai_api_key is provided, uses Gemini AI for optimization. Otherwise, provides
-    basic text-based suggestions.
-
+    Provide suggestions for adjusting the resume based on job skills.
+    
     Args:
-        resume_text (str): The text content of the resume.
-        job_keywords (list): List of keywords/skills from the job description.
-        ai_api_key (str, optional): API key for Gemini AI. Defaults to None.
-
+        resume_skills (list): List of skills extracted from the resume
+        job_skills (list): List of skills extracted from the job description
+        
     Returns:
-        str: Suggestions for improving the resume, or the optimized resume text
-             if Gemini AI is used.
+        str: Suggestions for resume improvement
     """
     print("Adjusting resume")
 
-    if ai_api_key:
-        try:
-            from lib.api_calls import optimize_resume_with_gemini  # Import locally
-            job_desc = '\n'.join(job_keywords) if isinstance(job_keywords, list) else str(job_keywords)
-            return optimize_resume_with_gemini(resume_text, job_desc, ai_api_key)
-        except ImportError as e:
-            return f"Error: Could not import optimize_resume_with_gemini.  Ensure lib/api_calls.py exists and is accessible. {e}"
-        except Exception as e:
-            return f"Error using Gemini AI: {e}"
-
-    from lib import resume_parser
-    resume_skills = resume_parser.extract_resume_skills(resume_text)
-
     # Normalize and convert to sets for efficient comparison
     resume_set = {s.lower().strip() for s in resume_skills if s and isinstance(s, str)}
-    job_set = {s.lower().strip() for s in job_keywords if s and isinstance(s, str)}
+    job_set = {s.lower().strip() for s in job_skills if s and isinstance(s, str)}
 
     missing_skills = job_set - resume_set
 
@@ -78,3 +60,42 @@ def adjust_resume(resume_text, job_keywords, ai_api_key=None):
         suggestions += f"- Utilized {skill} to achieve [specific outcome] in [relevant role].\n"
 
     return suggestions
+
+
+def optimize_resume(resume_text, job_description):
+    """
+    Comprehensive resume optimization using both simple matching and AI-based suggestions.
+    
+    Args:
+        resume_text (str): Full text of the resume
+        job_description (str): Full text of the job description
+        
+    Returns:
+        dict: Optimization results including both keyword-based and AI-based suggestions
+    """
+    from lib import resume_parser, job_parser
+    
+    # Extract skills from both documents
+    resume_skills = resume_parser.extract_resume_skills(resume_text)
+    job_skills = job_parser.extract_job_requirements(job_description)
+    
+    # Calculate match score
+    match_score = calculate_similarity(resume_skills, job_skills)
+    
+    # Get basic keyword suggestions
+    keyword_suggestions = adjust_resume(resume_skills, job_skills)
+    
+    # Get AI-powered optimization if available
+    try:
+        ai_suggestions = api_calls.optimize_resume_with_gemini(resume_text, job_description)
+    except Exception as e:
+        logging.error(f"AI optimization failed: {e}")
+        ai_suggestions = "AI optimization unavailable at this time."
+    
+    return {
+        'match_score': match_score,
+        'keyword_suggestions': keyword_suggestions,
+        'ai_suggestions': ai_suggestions,
+        'missing_skills': list(set(job_skills) - set(resume_skills)),
+        'matched_skills': list(set(job_skills) & set(resume_skills)),
+    }

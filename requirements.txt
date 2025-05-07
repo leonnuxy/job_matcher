@@ -27,6 +27,8 @@ google-api-python-client==2.107.0
 google-auth==2.23.3
 google-auth-httplib2==0.1.1
 google-auth-oauthlib==1.1.0
+google-generativeai==0.3.1  # For Gemini AI integration
+tenacity==8.2.2  # For retry logic
 
 # Natural Language Processing
 spacy==3.7.2
@@ -34,6 +36,7 @@ spacy==3.7.2
 
 # Testing
 pytest==7.4.2
+jsonschema==4.17.3  # For JSON schema validation
 
 # API
 flask-restful==0.3.10

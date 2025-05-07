@@ -1,0 +1,50 @@
+About the job
+We are seeking a skilled Pipeline Developer with hands-on experience in ShotGrid, Python, and API integrations to join our team. This role is instrumental in streamlining production workflows, developing tools, and ensuring seamless communication between departments in a fast-paced creative environment.
+
+
+Key Responsibilities
+
+ShotGrid Integration:
+
+Develop and maintain custom tools to integrate ShotGrid into production workflows.
+Automate task tracking, data management, and reporting within ShotGrid.
+Tool Development:
+
+Create and maintain Python-based tools to improve artist productivity and optimize workflows.
+Work with departments to gather requirements and develop user-friendly solutions.
+API Development:
+
+Build and maintain API integrations between ShotGrid, DCC tools (e.g., Resolve, Nuke, Houdini), and other production systems.
+Ensure secure and efficient data exchange between platforms.
+Pipeline Optimization:
+
+Troubleshoot and resolve pipeline issues to minimize downtime.
+Identify bottlenecks and propose solutions to enhance pipeline efficiency.
+Collaboration:
+
+Work closely with artists, production managers, and other developers to understand and support their needs.
+Provide technical support and training for tools and workflows.
+
+
+Qualifications
+
+Required:
+
+Strong experience with ShotGrid (Flow Production Tracking) and its ecosystem.
+Proficiency in Python for tool development and scripting.
+Hands-on experience with APIs, including designing, implementing, and debugging API-based systems.
+Understanding of CG/VFX/animation pipelines and production workflows.
+Problem-solving mindset with strong debugging and troubleshooting skills.
+Preferred:
+
+Experience with DCC software such as Maya, Houdini, Nuke, or Unreal Engine.
+Familiarity with database systems (e.g., SQL, NoSQL).
+Knowledge of version control systems like Git.
+Experience in agile or iterative development environments.
+Ability to create clear documentation and conduct user training.
+
+
+About us
+
+Outsyders are redefining the art of theatrical 3D conversion. Founded by pioneers from three of the most respected stereoscopic conversion studios, our team fuses decades of experience with cutting-edge machine learning to push the boundaries of cinematic immersion.
+Our innovations are trusted by the biggest names in Hollywood. We don’t just convert films; we elevate them, delivering a premium 3D experience that enhances storytelling, deepens engagement, and sets a new industry standard.

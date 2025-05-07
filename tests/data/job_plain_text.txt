@@ -1,0 +1,20 @@
+
+Data Scientist
+Data Analytics Inc.
+
+Job Description:
+We're looking for a Data Scientist to help us extract insights from our data.
+
+Required Skills:
+- Master's degree in Computer Science, Statistics, or related field
+- Experience with Python, R, and SQL
+- Knowledge of machine learning algorithms
+- Experience with data visualization tools
+- Strong analytical and problem-solving skills
+
+Responsibilities:
+- Develop and implement machine learning models
+- Analyze large datasets to identify patterns and trends
+- Create visualizations and reports for stakeholders
+- Collaborate with cross-functional teams
+        

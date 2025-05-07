@@ -1,0 +1,8 @@
+
+Software Engineer - Python
+ABC Tech Solutions
+
+We are looking for a Software Engineer with strong Python skills to join our team.
+Requirements include 3+ years experience with Python, Django, and SQL. Knowledge of AWS services is a plus.
+You will be responsible for developing and maintaining web applications, APIs, and backend services.
+        

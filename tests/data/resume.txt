@@ -1,6 +1,8 @@
+Noel Ugwoke
+Calgary, Alberta | LinkedIn | GitHub
 
 SKILLS
-- Languages & Paradigms: Java 11/17, JavaScript (ES6+), Python, ksh/bash
+- Languages & Paradigms: Java 11/17, JavaScript (ES6+), Python 3, ksh/bash
 - Build & Artefacts: Gradle, Maven, NPM, JFrog Artifactory
 - Source Control: GitHub (monorepo), Bitbucket, Git Flow
 - CI/CD: GitHub Actions, Jenkins multibranch, CodePipeline
