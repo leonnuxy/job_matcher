@@ -1,0 +1,34 @@
+[
+  {
+    "title": "Python",
+    "company": "QuantumCode",
+    "location": "Developer",
+    "link": "https://example.com/job/0",
+    "description": "QuantumCode is seeking a Python in Developer.",
+    "snippet": "QuantumCode is seeking a Python in Developer."
+  },
+  {
+    "title": "Python",
+    "company": "InnovateTech",
+    "location": "Developer",
+    "link": "https://example.com/job/1",
+    "description": "InnovateTech is seeking a Python in Developer.",
+    "snippet": "InnovateTech is seeking a Python in Developer."
+  },
+  {
+    "title": "Python",
+    "company": "QuantumCode",
+    "location": "Developer",
+    "link": "https://example.com/job/2",
+    "description": "QuantumCode is seeking a Python in Developer.",
+    "snippet": "QuantumCode is seeking a Python in Developer."
+  },
+  {
+    "title": "Python",
+    "company": "DataSoft",
+    "location": "Developer",
+    "link": "https://example.com/job/3",
+    "description": "DataSoft is seeking a Python in Developer.",
+    "snippet": "DataSoft is seeking a Python in Developer."
+  }
+]

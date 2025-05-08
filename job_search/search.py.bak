@@ -1,0 +1,485 @@
+"""
+Job search functionality that leverages scraping services.
+"""
+import os
+import logging
+import sys
+import random
+from typing import List, Dict
+import json
+import datetime
+
+# Add the parent directory to the path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import scraping functionality from services
+from services.scraper import (
+    search_google_for_jobs, scrape_job_board,
+    ensure_job_descriptions, SIMULATION_MODE, GOOGLE_API_KEY, GOOGLE_CSE_ID
+)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s - %(levelname)s - %(message)s")
+
+
+def generate_simulated_jobs(search_term: str) -> List[Dict]:
+    """
+    Produce fake listings for offline development.
+    """
+    parts = search_term.split()
+    title = " ".join(parts[:-1]) if len(parts) > 1 else parts[0]
+    loc = parts[-1] if len(parts) > 1 else "Remote"
+    companies = ["TechCorp", "DataSoft", "InnovateTech", "CloudWave", "QuantumCode"]
+    jobs: List[Dict] = []
+    for i in range(random.randint(3, 6)):
+        comp = random.choice(companies)
+        desc = f"{comp} is seeking a {title} in {loc}."
+        jobs.append({
+            "title": title,
+            "company": comp,
+            "location": loc,
+            "link": f"https://example.com/job/{i}",
+            "description": desc,
+            "snippet": desc
+        })
+    return jobs
+
+
+def scrape_job_board(url: str) -> List[Dict]:
+    """
+    Main entry: returns simulated, Google-CSE, or HTML-scraped listings.
+    """
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+    term = params.get('keywords', params.get('q', ['']))[0].replace('+', ' ')
+    loc = params.get('location', params.get('l', ['']))[0].replace('+', ' ')
+
+    if SIMULATION_MODE:
+        logging.info(f"[SIMULATION] {term} in {loc}")
+        return generate_simulated_jobs(term)
+
+    if GOOGLE_API_KEY and GOOGLE_CSE_ID:
+        return search_google_for_jobs(term, loc)
+
+    # HTML fallback
+    try:
+        logging.info(f"HTML scrape: {url}")
+        resp = session.get(url, headers={'User-Agent': USER_AGENT}, timeout=REQUEST_TIMEOUT)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, 'lxml')
+        return extract_job_listings(soup, url)
+    except Exception as e:
+        logging.error(f"Fallback scrape failed: {e}")
+        return []
+
+
+def extract_job_details(job_url: str, job_info: Optional[Dict] = None) -> Dict:
+    """
+    Scrape or reuse snippet for detailed job info, with graceful fallback on errors.
+    
+    Args:
+        job_url: URL of the job posting to scrape
+        job_info: Optional dictionary with existing job information (e.g., snippet)
+        
+    Returns:
+        Dictionary containing extracted job details, with at minimum a description if available
+    """
+    # In simulation mode, return empty dict if description already exists
+    if SIMULATION_MODE and job_info and job_info.get("description"):
+        return {}
+
+    # If the snippet is already substantial, use it without making a request
+    if job_info and job_info.get("snippet") and len(job_info["snippet"]) > 100:
+        return {"description": job_info["snippet"]}
+
+    # Skip common URLs that are known to block scraping or require login
+    if any(blocker in job_url.lower() for blocker in [
+        'linkedin.com/jobs', 'glassdoor.com/job', 'dice.com/job-detail'
+    ]):
+        logging.debug(f"Skipping fetch for {job_url} - known to block scraping")
+        if job_info and job_info.get("snippet"):
+            return {"description": job_info["snippet"]}
+        return {}
+
+    # Try to fetch the job details from the URL
+    try:
+        logging.debug(f"Fetching details from {job_url}")
+        
+        # Use a more browser-like headers to avoid detection
+        headers = {
+            'User-Agent': USER_AGENT,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Cache-Control': 'max-age=0'
+        }
+        
+        resp = session.get(job_url, headers=headers, timeout=REQUEST_TIMEOUT)
+        resp.raise_for_status()
+        
+        # Parse the HTML response
+        soup = BeautifulSoup(resp.text, 'lxml')
+        job_details = _parse_job_details(soup)
+        
+        # If we got a description, return it
+        if job_details.get('description'):
+            return job_details
+        
+        # If no description found but we have a snippet, use that
+        if not job_details.get('description') and job_info and job_info.get("snippet"):
+            job_details['description'] = job_info["snippet"]
+            
+        return job_details
+    
+    except requests.exceptions.HTTPError as e:
+        status = e.response.status_code if e.response else None
+        if status in (403, 429, 401, 404):
+            logging.debug(f"Access blocked (status {status}) for {job_url}, using snippet if available")
+        else:
+            logging.warning(f"HTTP error {status} extracting details from {job_url}")
+            
+        # Fall back to snippet if available
+        if job_info and job_info.get("snippet"):
+            return {"description": job_info["snippet"]}
+        return {}
+        
+    except requests.exceptions.Timeout:
+        logging.debug(f"Timeout fetching details from {job_url}, using snippet if available")
+        if job_info and job_info.get("snippet"):
+            return {"description": job_info["snippet"]}
+        return {}
+        
+    except Exception as e:
+        logging.warning(f"Error extracting details from {job_url}: {type(e).__name__} - {str(e)}")
+        if job_info and job_info.get("snippet"):
+            return {"description": job_info["snippet"]}
+        return {}
+
+
+def extract_job_listings(soup: BeautifulSoup, base_url: str) -> List[Dict]:
+    domain = urlparse(base_url).netloc.lower()
+    if 'linkedin.com' in domain:
+        return _extract_linkedin(soup)
+    if 'indeed.' in domain:
+        return _extract_indeed(soup)
+    if 'glassdoor.com' in domain:
+        return _extract_glassdoor(soup)
+    return _extract_generic(soup, base_url)
+
+
+def _parse_job_details(soup: BeautifulSoup) -> Dict:
+    """
+    Extract job details from BeautifulSoup object with enhanced description extraction.
+    
+    Args:
+        soup: BeautifulSoup object of the job page
+        
+    Returns:
+        Dictionary containing job details (description, location, company, etc.)
+    """
+    info: Dict[str, Optional[str]] = {}
+    
+    # Try to extract description using common selectors
+    description_selectors = [
+        '.job-description', '.description', '[data-automation="jobDescription"]',
+        '#job-description', '.jobDescriptionText', '.details-info',
+        '[data-test="job-description"]', '.job-desc', '.jobDesc',
+        '.job_description', '#jobDescriptionText', '.job-details',
+        '[itemprop="description"]', '.description-section',
+        'section.description', 'div[class*="description"]'
+    ]
+    info['description'] = _text_or_none(soup, description_selectors)
+    
+    # If no description found with selectors, try to find it in the page content
+    if not info.get('description'):
+        # Look for common container headings and extract content after them
+        description_heading_patterns = [
+            (r'<h[1-3][^>]*>Job Description</h[1-3]>(.*?)<h[1-3]', 1),
+            (r'<h[1-3][^>]*>Description</h[1-3]>(.*?)<h[1-3]', 1),
+            (r'<h[1-4][^>]*>About the role</h[1-4]>(.*?)<h[1-4]', 1),
+            (r'<strong>Job Description:?</strong>(.*?)(?:<strong>|<h[1-4])', 1),
+            (r'<div[^>]*>Description</div>(.*?)(?:<div[^>]*>|<section)', 1)
+        ]
+        
+        html_str = str(soup)
+        for pattern, group in description_heading_patterns:
+            match = re.search(pattern, html_str, re.IGNORECASE | re.DOTALL)
+            if match:
+                # Extract the content and convert to text
+                content_html = match.group(group)
+                content_soup = BeautifulSoup(content_html, 'lxml')
+                description_text = content_soup.get_text(separator=' ', strip=True)
+                
+                if description_text and len(description_text) > 50:
+                    info['description'] = description_text
+                    break
+    
+    # Extract location information
+    location_selectors = [
+        '.location', '.job-location', '[data-automation="jobLocation"]',
+        '[itemprop="jobLocation"]', '.job-info-location', '.jobLocation',
+        '.job-metadata-location', '[data-test="job-location"]'
+    ]
+    info['location'] = _text_or_none(soup, location_selectors)
+    
+    # Try regex if no location found with selectors
+    if not info.get('location'):
+        location_patterns = [
+            r'Location:\s*([^,\n]+),?',
+            r'Job Location:?\s*([^,\n]+),?',
+            r'Located in:?\s*([^,\n]+),?'
+        ]
+        info['location'] = _regex_search(soup.get_text(), location_patterns)
+    
+    # Extract company information
+    company_selectors = [
+        '.company-name', '.employer-name', '[data-automation="jobEmployer"]',
+        '[itemprop="hiringOrganization"]', '.CompanyName', '.company',
+        '[data-test="company-name"]', '.job-company', '.JobCompany'
+    ]
+    info['company'] = _text_or_none(soup, company_selectors)
+    
+    # Clean up description if it exists
+    if info.get('description'):
+        # Remove extra whitespace
+        info['description'] = re.sub(r'\s+', ' ', info['description']).strip()
+        
+    return {k: v for k, v in info.items() if v}
+
+
+def _extract_linkedin(soup: BeautifulSoup) -> List[Dict]:
+    jobs = []
+    for card in soup.select('.job-card-container, .jobs-search-results__list-item'):
+        title = _text_or_none(card, ['.job-card-list__title', '.job-card-container__link'])
+        link  = _link_or_none(card, 'a.job-card-container__link', base='https://www.linkedin.com')
+        comp  = _text_or_none(card, ['.job-card-container__company-name', '.jobs-search-results__company-name'])
+        loc   = _text_or_none(card, ['.job-card-container__metadata-item', '.job-card-container__metadata-location'])
+        if title and link:
+            jobs.append({'title': title, 'company': comp, 'location': loc, 'link': link})
+    return jobs
+
+
+def _extract_indeed(soup: BeautifulSoup) -> List[Dict]:
+    jobs = []
+    for card in soup.select('.job_seen_beacon, .jobsearch-ResultsList > div'):
+        title = _text_or_none(card, ['.jobTitle', '.jcs-JobTitle'])
+        link  = _link_or_none(card, 'a.jcs-JobTitle', base='https://www.indeed.com')
+        comp  = _text_or_none(card, ['.companyName'])
+        loc   = _text_or_none(card, ['.companyLocation'])
+        snippet = _text_or_none(card, ['.job-snippet', '.job-snippet-container'])
+        if title and link:
+            jobs.append({'title': title, 'company': comp, 'location': loc, 'link': link, 'snippet': snippet})
+    return jobs
+
+
+def _extract_glassdoor(soup: BeautifulSoup) -> List[Dict]:
+    jobs = []
+    for card in soup.select('.react-job-listing, .jobListItem'):
+        title = _text_or_none(card, ['.job-title', '.jobTitle'])
+        job_id = card.get('data-id')
+        link = f'https://www.glassdoor.com/job-listing/{job_id}' if job_id else None
+        comp  = _text_or_none(card, ['.jobInfoItem', '.employerName'])
+        loc   = _text_or_none(card, ['.jobInfoItem', '.location'])
+        snippet = _text_or_none(card, ['.job-snippet', '.jobDescriptionContent'])
+        if title and link:
+            jobs.append({'title': title, 'company': comp, 'location': loc, 'link': link, 'snippet': snippet})
+    return jobs
+
+def _extract_generic(soup: BeautifulSoup, base_url: str) -> List[Dict]:
+    jobs = []
+    for card in soup.select('.job-listing, .job-card'):
+        title = _text_or_none(card, ['.job-title', '.title'])
+        link  = _link_or_none(card, 'a.job-link', base=base_url)
+        comp  = _text_or_none(card, ['.company-name', '.company'])
+        loc   = _text_or_none(card, ['.location', '.job-location'])
+        snippet = _text_or_none(card, ['.job-snippet', '.description'])
+        if title and link:
+            jobs.append({'title': title, 'company': comp, 'location': loc, 'link': link, 'snippet': snippet})
+    return jobs
+
+def _text_or_none(soup: BeautifulSoup, selectors: List[str]) -> Optional[str]:
+    """
+    Extract text from the first matching selector or return None.
+    """
+    for selector in selectors:
+        element = soup.select_one(selector)
+        if element:
+            return element.get_text(strip=True)
+    return None
+
+def _link_or_none(soup: BeautifulSoup, selector: str, base: Optional[str] = None) -> Optional[str]:
+    """
+    Extract a link from the first matching selector or return None.
+    """
+    element = soup.select_one(selector)
+    if element:
+        link = element.get('href')
+        return urljoin(base, link) if base else link
+    return None
+
+def _regex_search(text: str, patterns: List[str]) -> Optional[str]:
+    """
+    Search for the first match of any pattern in the text.
+    """
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            return match.group(1).strip()
+    return None
+
+def ensure_job_descriptions(jobs: List[Dict], min_description_length: int = 50) -> List[Dict]:
+    """
+    Ensure each job has a meaningful description by:
+    1. Validating each job's description field
+    2. For jobs with missing/short descriptions, fetch details from the job URL
+    3. Fall back to snippet if fetching fails
+    4. Filter out jobs that still have no meaningful description
+    
+    Args:
+        jobs: List of job dictionaries
+        min_description_length: Minimum acceptable description length in characters
+        
+    Returns:
+        List of jobs with validated descriptions
+    """
+    enriched_jobs = []
+    skipped_jobs = 0
+    already_good = 0
+    enriched_from_details = 0
+    enriched_from_snippet = 0
+    
+    for job in jobs:
+        job_title = job.get('title', 'Unknown')
+        
+        # Check if job already has a good description
+        if job.get("description") and len(job["description"]) >= min_description_length:
+            already_good += 1
+            enriched_jobs.append(job)
+            continue
+        
+        # Try to fetch additional details
+        has_valid_description = False
+        
+        # Only try to fetch if we have a link
+        if job.get("link"):
+            # Try to get detailed description from the job page
+            job_details = extract_job_details(job["link"], job)
+            if job_details.get("description") and len(job_details["description"]) >= min_description_length:
+                job["description"] = job_details["description"]
+                has_valid_description = True
+                enriched_from_details += 1
+                logging.debug(f"Enhanced description for '{job_title}' by fetching details")
+        
+        # Fall back to snippet if available and no valid description yet
+        if not has_valid_description and job.get("snippet") and len(job["snippet"]) >= min_description_length:
+            job["description"] = job["snippet"]
+            has_valid_description = True
+            enriched_from_snippet += 1
+            logging.debug(f"Used snippet as description for '{job_title}'")
+            
+        # If we still don't have a valid description, check if we have any description at all
+        if not has_valid_description and not job.get("description"):
+            # Last resort: use snippet even if it's short
+            if job.get("snippet"):
+                job["description"] = job["snippet"]
+                has_valid_description = True
+                enriched_from_snippet += 1
+                logging.debug(f"Used short snippet as description for '{job_title}'")
+        
+        # Only keep jobs that have some form of description
+        if job.get("description"):
+            enriched_jobs.append(job)
+        else:
+            skipped_jobs += 1
+            logging.debug(f"Skipping job '{job_title}' - no valid description")
+    
+    # Log summary of enrichment process
+    logging.info(f"Description enrichment summary:")
+    logging.info(f"  - {already_good} jobs already had good descriptions")
+    logging.info(f"  - {enriched_from_details} jobs enriched from detailed page extraction")
+    logging.info(f"  - {enriched_from_snippet} jobs enriched from snippets")
+    
+    if skipped_jobs > 0:
+        logging.info(f"  - {skipped_jobs} jobs skipped due to no valid description")
+    
+    return enriched_jobs
+
+def main():
+    """
+    Main function for job searching based on command line arguments.
+    Called by run.py as the search_main function.
+    """
+    import argparse
+    import json
+    import datetime
+    import os
+    
+    parser = argparse.ArgumentParser(description="Search for jobs")
+    parser.add_argument("--terms", nargs="+", help="Search terms to use")
+    parser.add_argument("--locations", nargs="+", default=["Remote"], help="Locations to search in")
+    parser.add_argument("--recency", type=float, default=24, help="Recency in hours")
+    parser.add_argument("--google", action="store_true", default=True, help="Use Google CSE")
+    parser.add_argument("--no-google", action="store_false", dest="google", help="Don't use Google CSE")
+    parser.add_argument("--max-jobs", type=int, default=10, help="Maximum jobs per search")
+    args = parser.parse_args()
+    
+    # Get search terms from arguments or file
+    search_terms = args.terms
+    if not search_terms:
+        try:
+            with open("data/search_terms.txt", "r") as f:
+                search_terms = [line.strip() for line in f if line.strip()]
+        except Exception as e:
+            logging.error(f"Failed to read search terms: {e}")
+            search_terms = ["Python Developer"]  # Default fallback
+    
+    logging.info(f"Searching for: {search_terms} in {args.locations}")
+    
+    # Collection of all jobs
+    all_jobs = []
+    
+    # Set simulation mode if needed
+    if os.getenv("SIMULATION_MODE", "false").lower() in ("true", "1", "yes"):
+        logging.info("Running in simulation mode")
+        for term in search_terms:
+            for location in args.locations:
+                search_query = f"{term} {location}"
+                jobs = generate_simulated_jobs(search_query)
+                all_jobs.extend(jobs)
+                logging.info(f"Found {len(jobs)} simulated jobs for '{search_query}'")
+    else:
+        # Real search
+        if args.google and (GOOGLE_API_KEY and GOOGLE_CSE_ID):
+            for term in search_terms:
+                for location in args.locations:
+                    jobs = search_google_for_jobs(term, location, recency_hours=args.recency)
+                    all_jobs.extend(jobs)
+                    logging.info(f"Found {len(jobs)} jobs for '{term}' in '{location}'")
+        else:
+            logging.warning("Google CSE not available. Using HTML fallback (less reliable).")
+            # Would implement HTML scraping here, but stub for now
+            logging.warning("HTML fallback not implemented in this example")
+    
+    # Ensure each job has a proper description
+    if all_jobs:
+        logging.info(f"Enriching job descriptions for {len(all_jobs)} jobs")
+        all_jobs = ensure_job_descriptions(all_jobs)
+        logging.info(f"After enrichment: {len(all_jobs)} valid jobs with descriptions")
+    
+    # Save results to a file
+    if all_jobs:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        output_file = f"data/job_search_results/job_search_{timestamp}.json"
+        
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+        
+        with open(output_file, "w") as f:
+            json.dump(all_jobs, f, indent=2)
+        
+        logging.info(f"Saved {len(all_jobs)} jobs to {output_file}")
+    else:
+        logging.warning("No jobs found!")
+    
+    return all_jobs

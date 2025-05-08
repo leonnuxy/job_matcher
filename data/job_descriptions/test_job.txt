@@ -1,0 +1,12 @@
+Title: Senior ML Engineer
+Company: TechAI Solutions
+Location: Remote
+
+Job Description:
+We're looking for a Senior ML Engineer to join our team and help build cutting-edge AI solutions. The ideal candidate has experience with Python, TensorFlow/PyTorch, and cloud deployment.
+
+Requirements:
+- 3+ years of experience with ML/AI
+- Proficient in Python
+- Experience with TensorFlow or PyTorch
+- Understanding of MLOps and CI/CD pipelines

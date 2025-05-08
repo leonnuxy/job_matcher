@@ -1,45 +1,28 @@
 About the job
-Job Title: Web Developer 
-Location: Calgary, AB (Hybrid)
-Employment Contract opportunity 
-Experience: 10+ years
+Proof is a fast-growing startup at the forefront of legal technology, offering a best-in-class platform trusted by thousands of law firms across the U.S. Our platform is growing rapidly, with a 10% month-over-month growth, and we are seeking a skilled and motivated Full-Stack Engineer to join our talented engineering team as we scale and expand.
 
 
-About VLink: Started in 2006 and headquartered in Connecticut, VLink is one of the fastest growing digital technology services and consulting companies. Since its inception, our innovative team members have been solving the most complex business, and IT challenges of our global clients.
+Responsibilities
 
-Job Description:
-
-RESPONSIBILITIES
-
-Effectively work with the PMO, Development, Product Management, Business and Technical Operations, Systems Engineering, Infrastructure, Networks and Architecture teams
-Design and develop front-end React/Angular based application.
-Performs new development, maintenance fixes and enhancements to meet business requirements.
-Draft and review architectural diagrams, specifications, business requirements as well as various design documents.
-Work with our existing technology stack (Java, C++, Linux, Unix, Open-Source Platforms, and SOA) as well as new technologies for our next generation solutions.
-Documents technical requirements, program and subsystem designs, resolutions to system problems, project task descriptions, effort estimates, and unit and integration tests.
-Acquire a robust understanding of financial products, services, processes, and organizational structure in order to find optimal solutions.
-Maintain awareness of industry trends, compliance concerns, risk control processes, and regulatory landscape
-Mentor other software developers
+Collaborate closely with engineers, designers, and product managers to architect, develop, and maintain high-quality full-stack features across the Proof platform.
+Design and implement backend services and APIs using Go (Golang), ensuring reliability, scalability, and performance. Optimize interactions with databases and core infrastructure components.
+Build modern, intuitive, and responsive user interfaces using React and TypeScript, with attention to usability, accessibility, and design consistency.
+Identify, troubleshoot, and resolve system performance bottlenecks, reliability issues, and security vulnerabilities across both frontend and backend systems.
+Participate in all stages of the software development lifecycle, including planning, design reviews, implementation, deployment, and post-launch support.
+Contribute to architectural decisions and guide the technical direction of our platform through well-reasoned proposals and implementation leadership.
+Engage in regular code reviews, ensuring adherence to best practices, clean architecture, and code quality. Lead by example and mentor junior team members when appropriate.
+Partner with DevOps to support automated testing, deployment pipelines, and observability tools that ensure our software is stable, traceable, and continuously delivered.
+Stay up to date on industry trends, bringing forward relevant technologies and practices that can improve team productivity and system robustness.
 
 
-REQUIREMENTS
+Qualifications
 
-3 - 5+ years in web development in JavaScript, REACT and/or Angular & TypeScript, RxJs
-A solid understanding of responsive design/development and mobile-web best practices.
-Proficient understanding of code versioning tools, such as Git and Bitbucket
-Practical experience and understanding of low latency messaging middleware
-Practical experience working within the Scrum Framework and Agile methodologies
-Must possess strong analytical, troubleshooting, and problem-solving skills
-Excellent English verbal and written communication skills
-Willingness to occasionally wander into other areas (e.g., backend, devops, other teams’ codebase) and ship end-to-end solutions.
-Drive to learn, grow and “make things better than you found it”.
-Self-motivated, highly organized, team player who thrives in a fast-paced environment with the ability to learn quickly and work independently.
-
-
-DESIRED SKILLS:
-
-Knowledgeable in Financial Markets, Banking, or Wealth Management.
-Familiar with related non-development fields (Product, UX, Business Analytics, Information Mapping, etc.)
-Experience with Java, Spring, Spring Boot, Hibernate, UI development.
-Practical experience with relational databases (Oracle, Sybase)
-
+2–5 years of professional experience as a full-stack engineer, with a track record of delivering production-grade applications that are performant, maintainable, and user-friendly.
+Strong proficiency in backend development, ideally with Go (Golang), and comfort working with modern web frameworks, APIs, and data processing workflows. Equivalent experience in languages like Python, Node.js, or Ruby will be considered.
+Solid experience with modern frontend development using React and TypeScript, including state management, component-based architecture, and responsive design.
+Working knowledge of relational and/or NoSQL databases, with practical experience designing schemas, writing queries, and integrating them with backend systems.
+Deep understanding of RESTful API design principles. Experience with GraphQL is a plus.
+Familiarity with CI/CD tools and workflows, and a strong commitment to writing testable, well-documented code.
+Ability to analyze complex technical problems and make decisions with sound judgment under constraints and ambiguity.
+Experience working in agile environments with remote teams, and strong communication skills to coordinate effectively across time zones and functions.
+Self-starter with a growth mindset and a willingness to take ownership of challenging problems from conception to completion.
