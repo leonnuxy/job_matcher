@@ -1,0 +1,45 @@
+/* Custom styles for the resume optimizer */
+
+body {
+    background-color: #f8f9fa;
+}
+
+.container {
+    max-width: 1000px;
+}
+
+.optimized-resume {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+}
+
+.optimized-resume h1 {
+    font-size: 2rem;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.optimized-resume h2 {
+    font-size: 1.5rem;
+    margin-top: 1.5rem;
+    color: #343a40;
+}
+
+.optimized-resume h3 {
+    font-size: 1.25rem;
+    margin-top: 1rem;
+}
+
+.optimized-resume ul {
+    margin-bottom: 1rem;
+}
+
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: none;
+}
+
+textarea {
+    font-family: monospace;
+}

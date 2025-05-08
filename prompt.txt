@@ -1,0 +1,132 @@
+You are a professional resume consultant with expertise in applicant tracking systems and job matching.
+
+INSTRUCTIONS:
+1. Analyze the provided resume and job description.
+2. Identify skills, experiences, and keywords in the job description that are missing or under-emphasized in the resume.
+3. Generate an optimized resume in the exact format shown below, observing these constraints:
+   - **TECHNICAL SKILLS** section: at most **6** bullet points.
+   - **First PROFESSIONAL EXPERIENCE** entry: at most **5** bullet points (excluding the “Tools Used” line).
+   - **Second PROFESSIONAL EXPERIENCE** entry: at most **4** bullet points (excluding the “Tools Used” line).
+4. After the PROFESSIONAL EXPERIENCE section and before EDUCATION, include a **KEY PROJECT** section by selecting **exactly one** of the projects listed in the JSON array below. For that project:
+   - Use its `title`, `company`, and the `year` if provided (omit year if not).
+   - Under the title line, add a single bullet using its `description`.
+   - On the next line, list its `skills` in square brackets.
+5. Do **not** add any other sections or explanatory text.
+
+
+RESUME:
+{resume_text}
+
+JOB DESCRIPTION:
+{job_description}
+
+AVAILABLE PROJECTS:
+[
+  {
+    "title": "Supply Chain Analytics Platform",
+    "company": "Parkland Fuel Corp.",
+    "skills": ["Power BI", "SQL", "APIs", "Excel"],
+    "description": "Built a Power BI dashboard integrating SQL, Excel, and APIs, reducing manual reporting efforts by 60% for logistics teams."
+  },
+  {
+    "title": "Vaccine Booking System",
+    "company": "Alberta Health Services",
+    "skills": ["React", "TypeScript", "AWS", "Node.js"],
+    "description": "Developed a secure, scalable full-stack platform and backend, handling 500+ daily appointments."
+  },
+  {
+    "title": "Gas Pipeline Monitoring",
+    "company": "Spartan Controls",
+    "skills": ["Python", "Django", "PostgreSQL", "JavaScript"],
+    "description": "Created a Python/Django tool for real-time pipeline diagnostics, reducing inspection time by 45%."
+  },
+  {
+    "title": "Customer Churn Prediction Model",
+    "company": "Personal Project",
+    "skills": ["Python", "TensorFlow", "Pandas", "NumPy"],
+    "description": "Trained a TensorFlow machine learning model with 92% accuracy using Python, enabling targeted customer retention strategies."
+  },
+  {
+    "title": "AI Resume Optimizer",
+    "company": "Personal Project",
+    "skills": ["Python", "MySQL", "NLP", "Ollama", "Mistral"],
+    "description": "Designed a Python/MySQL application to analyze resumes against job descriptions, improving alignment for 100+ test users."
+  },
+  {
+    "title": "Bookstore Website",
+    "company": "Personal Project",
+    "skills": ["HTML", "CSS", "JavaScript", "MySQL"],
+    "description": "Created a website for purchasing books with checkout systems."
+  },
+  {
+    "title": "Restaurant App",
+    "company": "Personal Project",
+    "skills": ["Django", "Python", "SQLite", "React"],
+    "description": "Developed a web application for restaurant management, integrating Django, Python, SQLite and React."
+  },
+  {
+    "title": "Nigerian Food Order App",
+    "company": "Personal Project",
+    "skills": ["React", "Vite", "JavaScript"],
+    "description": "Designed a Nigerian food order application to facilitate online ordering and delivery."
+  },
+  {
+    "title": "MindPal App",
+    "company": "Personal Project",
+    "skills": ["React", "JavaScript"],
+    "description": "An application aimed at boosting mental health and wellness by providing interactive games and activities."
+  },
+  {
+    "title": "MentalBud WebApp",
+    "company": "Personal Project",
+    "skills": ["HTML", "CSS", "JavaScript"],
+    "description": "A mobile app for mental health and wellness, providing users with tools and resources to manage stress and anxiety."
+  },
+  {
+    "title": "Calculator Project",
+    "company": "Personal Project",
+    "skills": ["JavaScript", "HTML", "CSS"],
+    "description": "A modern, responsive calculator application featuring keyboard support, basic arithmetic operations, and a clean UI."
+  }
+]
+
+OUTPUT FORMAT (exactly):
+
+# NOEL UGWOKE
+Calgary, Alberta | 306-490-2929 | 1leonnoel1@gmail.com | [LinkedIn](https://www.linkedin.com/in/noelugwoke/) | [Portfolio](https://noelugwoke.com/)
+
+## TECHNICAL SKILLS
+- **Languages & Frameworks:**  Python, TypeScript/Node.js, SQL, Java, SQL, JavaScript, C++, C#
+- **Data & Analytics:** Apache Spark, Kafka, AWS S3/EMR, dbt, Snowflake/Redshift, Glue Catalog, Pandas
+- **Cloud & DevOps:** Docker, Kubernetes, GitHub Actions, Jenkins, Terraform, Serverless (AWS-Lambda)
+- **Testing & Quality:** PyTest, Jest, Data-quality checks, CI pipelines, Code reviews
+- **Soft Skills:**  Clear documentation, Requirements decomposition, Team mentoring, Rapid debugging
+- **<up to 6 bullets>**
+
+## PROFESSIONAL EXPERIENCE
+
+**Software Engineer (Cloud & Data)**  
+APEGA | Calgary, AB | Dec 2022 – Dec 2024  
+* <bullet 1>  
+* …  
+* <up to 5 bullets>  
+
+**Tools Used:** <tools list>
+
+**Software Developer – WebApps (DevOps)**  
+Spartan Controls | Calgary, AB | Jul 2021 – Nov 2022  
+* <bullet 1>  
+* …  
+* <up to 4 bullets>  
+
+**Tools Used:** <tools list>
+
+## KEY PROJECT
+**<selected title>** | <company> | <year if known>  
+*   <description>  
+**[<skill1>, <skill2>, …]**
+
+## EDUCATION & CERTIFICATIONS
+*   **BSc. Computer Science**, University of Calgary | 2016–2022  
+*   **AWS Certified Cloud Practitioner**, Amazon Web Services | Jan 2023  
+*   **Google Cloud Professional Developer**, Google Cloud | 2023–2026  

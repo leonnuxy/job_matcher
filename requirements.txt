@@ -1,21 +1,20 @@
-# Database
-mysql-connector-python==8.0.33
-sqlalchemy==2.0.23
-alembic==1.12.1
+# AI/ML Libraries
+google-generativeai>=0.3.0
+openai>=1.0.0
 
-# Web Framework
-flask==2.3.3
-flask-wtf==1.1.1
-flask-login==0.6.2
+# Testing
+pytest>=7.3.1
+pytest-cov>=6.1.1
 
 # Data Processing
 pandas==2.1.1
 numpy==1.26.0
 
 # Utilities
-python-dotenv==1.0.0
-requests==2.31.0
-beautifulsoup4==4.12.2
+python-dotenv>=1.0.0
+requests>=2.31.0
+beautifulsoup4>=4.12.2
+tenacity>=8.2.2
 bs4==0.0.1  # Ensures bs4 compatibility
 
 # Machine Learning
@@ -40,3 +39,10 @@ jsonschema==4.17.3  # For JSON schema validation
 
 # API
 flask-restful==0.3.10
+fastapi>=0.103.1
+uvicorn>=0.23.2
+pydantic>=2.4.2
+
+# Web Interface
+flask>=2.2.3
+markdown>=3.4.3

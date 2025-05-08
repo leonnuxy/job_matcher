@@ -1,50 +1,45 @@
 About the job
-We are seeking a skilled Pipeline Developer with hands-on experience in ShotGrid, Python, and API integrations to join our team. This role is instrumental in streamlining production workflows, developing tools, and ensuring seamless communication between departments in a fast-paced creative environment.
+Job Title: Web Developer 
+Location: Calgary, AB (Hybrid)
+Employment Contract opportunity 
+Experience: 10+ years
 
 
-Key Responsibilities
+About VLink: Started in 2006 and headquartered in Connecticut, VLink is one of the fastest growing digital technology services and consulting companies. Since its inception, our innovative team members have been solving the most complex business, and IT challenges of our global clients.
 
-ShotGrid Integration:
+Job Description:
 
-Develop and maintain custom tools to integrate ShotGrid into production workflows.
-Automate task tracking, data management, and reporting within ShotGrid.
-Tool Development:
+RESPONSIBILITIES
 
-Create and maintain Python-based tools to improve artist productivity and optimize workflows.
-Work with departments to gather requirements and develop user-friendly solutions.
-API Development:
-
-Build and maintain API integrations between ShotGrid, DCC tools (e.g., Resolve, Nuke, Houdini), and other production systems.
-Ensure secure and efficient data exchange between platforms.
-Pipeline Optimization:
-
-Troubleshoot and resolve pipeline issues to minimize downtime.
-Identify bottlenecks and propose solutions to enhance pipeline efficiency.
-Collaboration:
-
-Work closely with artists, production managers, and other developers to understand and support their needs.
-Provide technical support and training for tools and workflows.
+Effectively work with the PMO, Development, Product Management, Business and Technical Operations, Systems Engineering, Infrastructure, Networks and Architecture teams
+Design and develop front-end React/Angular based application.
+Performs new development, maintenance fixes and enhancements to meet business requirements.
+Draft and review architectural diagrams, specifications, business requirements as well as various design documents.
+Work with our existing technology stack (Java, C++, Linux, Unix, Open-Source Platforms, and SOA) as well as new technologies for our next generation solutions.
+Documents technical requirements, program and subsystem designs, resolutions to system problems, project task descriptions, effort estimates, and unit and integration tests.
+Acquire a robust understanding of financial products, services, processes, and organizational structure in order to find optimal solutions.
+Maintain awareness of industry trends, compliance concerns, risk control processes, and regulatory landscape
+Mentor other software developers
 
 
-Qualifications
+REQUIREMENTS
 
-Required:
-
-Strong experience with ShotGrid (Flow Production Tracking) and its ecosystem.
-Proficiency in Python for tool development and scripting.
-Hands-on experience with APIs, including designing, implementing, and debugging API-based systems.
-Understanding of CG/VFX/animation pipelines and production workflows.
-Problem-solving mindset with strong debugging and troubleshooting skills.
-Preferred:
-
-Experience with DCC software such as Maya, Houdini, Nuke, or Unreal Engine.
-Familiarity with database systems (e.g., SQL, NoSQL).
-Knowledge of version control systems like Git.
-Experience in agile or iterative development environments.
-Ability to create clear documentation and conduct user training.
+3 - 5+ years in web development in JavaScript, REACT and/or Angular & TypeScript, RxJs
+A solid understanding of responsive design/development and mobile-web best practices.
+Proficient understanding of code versioning tools, such as Git and Bitbucket
+Practical experience and understanding of low latency messaging middleware
+Practical experience working within the Scrum Framework and Agile methodologies
+Must possess strong analytical, troubleshooting, and problem-solving skills
+Excellent English verbal and written communication skills
+Willingness to occasionally wander into other areas (e.g., backend, devops, other teams’ codebase) and ship end-to-end solutions.
+Drive to learn, grow and “make things better than you found it”.
+Self-motivated, highly organized, team player who thrives in a fast-paced environment with the ability to learn quickly and work independently.
 
 
-About us
+DESIRED SKILLS:
 
-Outsyders are redefining the art of theatrical 3D conversion. Founded by pioneers from three of the most respected stereoscopic conversion studios, our team fuses decades of experience with cutting-edge machine learning to push the boundaries of cinematic immersion.
-Our innovations are trusted by the biggest names in Hollywood. We don’t just convert films; we elevate them, delivering a premium 3D experience that enhances storytelling, deepens engagement, and sets a new industry standard.
+Knowledgeable in Financial Markets, Banking, or Wealth Management.
+Familiar with related non-development fields (Product, UX, Business Analytics, Information Mapping, etc.)
+Experience with Java, Spring, Spring Boot, Hibernate, UI development.
+Practical experience with relational databases (Oracle, Sybase)
+

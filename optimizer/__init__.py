@@ -1,0 +1,3 @@
+"""
+Optimizer package initialization.
+"""
