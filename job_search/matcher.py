@@ -1,11 +1,11 @@
 """
-Job matching module that compares job listings with resumes.
+Job matching module that compares job listings with resumes and generates cover letters.
 """
 import os
 import sys
 import json
 import logging
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 from datetime import datetime
 
 # Add parent directory to sys.path if running as a module
@@ -15,6 +15,7 @@ if parent_dir not in sys.path:
 
 from optimizer.optimize import optimize_resume
 from services.utils import save_optimized_resume
+from services.cover_letter import load_cover_letter_template, generate_cover_letter, save_cover_letter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -133,10 +134,14 @@ def calculate_match_score(resume: str, job: Dict) -> float:
         return 0.0
     
     # For simulation mode, ensure we always get some matches
-    if "SIMULATION_MODE" in os.environ or "TechCorp Inc." in job.get('company', ''):
-        # Return a random score between 0.5 and 0.95
+    if "SIMULATION_MODE" in os.environ:
+        # For specific companies we want to test, give a high score
+        company = job.get('company', '').lower()
+        if company in ['beehiiv', 'techcorp', 'innovatetech']:
+            return 0.95
+        # For other cases, return a random score
         import random
-        return random.uniform(0.5, 0.95)
+        return random.uniform(0.5, 0.85)
     
     # Extract keywords from the job description
     # In a real implementation, use NLP techniques like TF-IDF or word embeddings
@@ -153,16 +158,17 @@ def calculate_match_score(resume: str, job: Dict) -> float:
     return len(matching_keywords) / len(job_keywords)
 
 
-def optimize_for_job(resume: str, job: Dict) -> Tuple[str, str]:
+def optimize_for_job(resume: str, job: Dict, generate_cover_letter_flag: bool = False) -> Tuple[str, str, Optional[str]]:
     """
-    Optimize a resume for a specific job.
+    Optimize a resume for a specific job and optionally generate a cover letter.
     
     Args:
         resume: Resume text
         job: Job dictionary with 'description' field
+        generate_cover_letter_flag: Whether to generate a cover letter
         
     Returns:
-        Tuple of (optimized_resume, output_path)
+        Tuple of (optimized_resume, resume_output_path, cover_letter_output_path)
     """
     job_title = job.get('title', 'Unknown Job')
     job_company = job.get('company', 'Unknown Company')
@@ -170,12 +176,12 @@ def optimize_for_job(resume: str, job: Dict) -> Tuple[str, str]:
     
     if not job_description:
         logging.error(f"No job description found for {job_title} at {job_company}")
-        return None, None
+        return None, None, None
     
-    # Load prompt template
+    # Load prompt template for resume
     prompt_template = load_prompt_template()
     if not prompt_template:
-        return None, None
+        return None, None, None
     
     # Generate optimized resume
     logging.info(f"Optimizing resume for: {job_title} at {job_company}")
@@ -183,25 +189,57 @@ def optimize_for_job(resume: str, job: Dict) -> Tuple[str, str]:
     
     if not optimized_md:
         logging.error("Failed to optimize resume")
-        return None, None
+        return None, None, None
+    
+    # Create safe filename components
+    job_title_safe = "".join(c if c.isalnum() else "_" for c in job_title)
+    company_safe = "".join(c if c.isalnum() else "_" for c in job_company)
+    custom_suffix = f"{job_title_safe}_{company_safe}"
     
     # Save optimized resume
-    job_title_safe = "".join(c if c.isalnum() else "_" for c in job_title)
-    custom_suffix = f"{job_title_safe}_{job_company}"
-    
-    output_path = save_optimized_resume(
+    resume_output_path = save_optimized_resume(
         optimized_md,
         OUTPUT_DIR,
         include_timestamp=True,
         custom_suffix=custom_suffix
     )
     
-    return optimized_md, output_path
+    cover_letter_path = None
+    if generate_cover_letter_flag:
+        # Generate cover letter
+        logging.info(f"Generating cover letter for: {job_title} at {job_company}")
+        cover_letter_template = load_cover_letter_template()
+        
+        if cover_letter_template:
+            # Fill in the template with job details
+            filled_letter = generate_cover_letter(job, cover_letter_template)
+            
+            if filled_letter:
+                # Save the cover letter
+                cover_letter_path = save_cover_letter(
+                    filled_letter,
+                    OUTPUT_DIR,
+                    include_timestamp=True,
+                    custom_suffix=custom_suffix
+                )
+                if cover_letter_path:
+                    logging.info(f"Cover letter saved to: {cover_letter_path}")
+                else:
+                    logging.error("Failed to save cover letter")
+            else:
+                logging.error("Failed to generate cover letter")
+        else:
+            logging.warning("Cover letter template not found, skipping cover letter generation")
+    
+    return optimized_md, resume_output_path, cover_letter_path
 
 
-def main():
+def main(with_cover_letter: bool = False):
     """
     Main entry point for job matching.
+    
+    Args:
+        with_cover_letter: Whether to generate a cover letter alongside the resume
     """
     logging.info("Starting job matching...")
     
@@ -234,10 +272,15 @@ def main():
     for job, score in top_matches:
         logging.info(f"Match score: {score:.2f} for {job.get('title')} at {job.get('company')}")
         
-        optimized_md, output_path = optimize_for_job(resume, job)
+        optimized_md, resume_path, cover_letter_path = optimize_for_job(resume, job, with_cover_letter)
         
-        if optimized_md and output_path:
-            logging.info(f"Optimized resume saved to: {output_path}")
+        if optimized_md and resume_path:
+            logging.info(f"Optimized resume saved to: {resume_path}")
+            
+            if with_cover_letter and cover_letter_path:
+                logging.info(f"Cover letter saved to: {cover_letter_path}")
+            elif with_cover_letter:
+                logging.warning(f"Cover letter generation requested but failed for {job.get('title')}")
         else:
             logging.error(f"Failed to optimize resume for {job.get('title')}")
     

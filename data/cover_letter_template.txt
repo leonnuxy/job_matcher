@@ -1,0 +1,18 @@
+Dear {{hiring_team|Hiring Team}},
+
+I am excited to apply for the {{role_title}} role at {{company_name}}. As a recent {{education}} from {{university}} with hands-on experience building scalable solutions at {{experience1_company}} and {{experience2_company}}, I am eager to contribute to {{company_name}}’s mission of {{company_mission}}. My ability to {{skill_summary}} aligns with the challenges and opportunities of a rapidly growing {{industry_desc}} like {{company_name}}.
+
+At {{experience1_company}}, I {{experience1_accomplishments}}. By {{experience1_metrics}}, I {{experience1_results}}. These efforts underscored my ability to deliver under pressure, a crucial skill for {{company_name}}.
+
+As a {{experience2_role}} at {{experience2_company}}, I {{experience2_accomplishments}} and {{experience2_metrics}}. These experiences fueled my passion for {{passion_desc}}, which I bring to {{company_name}}’s agile teams.
+
+{{company_name}}’s developer-focused environment excites me. My skills in {{skill_list}}, along with relevant certifications in {{certifications}}, enable immediate contributions. I thrive in collaborative settings, exemplified by {{teamwork_achievement}}. Additionally, I’ve {{additional_achievement}}.
+
+{{company_name}}’s rapid growth and recognition as {{company_recognition}} inspire me. I am drawn to your culture of {{company_culture}}. As someone who builds personal projects like {{personal_projects}}, I am hungry to learn from {{company_name}}’s brightest minds and take on bigger challenges as I grow with the team.
+
+I would be delighted to discuss how my technical background and proactive mindset can support {{company_name}}’s goals. I am available to attend {{interview_details}} and look forward to the opportunity to connect.
+
+Thank you for your consideration.
+
+Sincerely,  
+{{applicant_name}}

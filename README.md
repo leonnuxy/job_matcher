@@ -1,6 +1,6 @@
 # Job Matching and Resume Optimization Project
 
-This project aims to automate the process of finding relevant job postings, extracting job requirements, matching your resume to those requirements, and optimizing your resume for Applicant Tracking Systems (ATS).
+This project aims to automate the process of finding relevant job postings, extracting job requirements, matching your resume to those requirements, optimizing your resume for Applicant Tracking Systems (ATS), and generating tailored cover letters.
 
 ## Project Structure
 
@@ -66,25 +66,49 @@ The project is organized into several modules:
 
 ### Command Line Interface
 
-#### Main Application
+#### Running Job Search & Matching
 
-Run the `main.py` script:
+The main script for running job searches and generating optimized documents is:
 
 ```bash
-python main.py
+python run_job_search.py [options]
 ```
 
-This will:
+Options include:
+- `--search-only` - Only run job search, not matching
+- `--match-only` - Only run job matching, not search
+- `--simulate` - Run in simulation mode (no API calls)
+- `--terms TERMS [TERMS...]` - Search terms to use
+- `--locations LOC [LOC...]` - Locations to search in
+- `--recency HOURS` - Only include results from last N hours
+- `--max-jobs N` - Maximum jobs to fetch per board/location
+- `--with-cover-letter` - Generate cover letters alongside resumes
+
+Examples:
+```bash
+# Run a full search with cover letters
+python run_job_search.py --terms "Python Developer" --with-cover-letter
+
+# Test the pipeline in simulation mode
+python run_job_search.py --simulate --terms "DevOps Engineer" --with-cover-letter
+
+# Only run matching on existing results
+python run_job_search.py --match-only --with-cover-letter
+```
+
+For each matching job, the script will:
 1. Read your resume from `data/resume.txt`
-2. Read the job description from `data/job_descriptions/job_description.txt`
-3. Use the chosen LLM provider (Gemini or OpenAI) to generate an optimized resume
-4. Save the result to `data/optimization_results/` with a timestamp
+2. Load the cover letter template from `data/cover_letter_template.txt` (if `--with-cover-letter` is used)
+3. Use AI to optimize your resume and cover letter for the job
+4. Save both to `data/optimization_results/` with timestamps and job details in filenames
+ 
+Output Naming Convention:
+- Resumes: `Resume_JobTitle_Company_[timestamp].md`
+- Cover Letters: `CoverLetter_JobTitle_Company_[timestamp].md`
 
-You can also specify a custom job description file and output options:
-
-```bash
-python main.py --job path/to/job_description.txt --suffix custom_name --no-timestamp
-```
+Symlinks to the latest versions are maintained at:
+- `data/optimization_results/latest_resume.md`
+- `data/optimization_results/latest_cover_letter.md`
 
 #### Resume Optimizer Module
 

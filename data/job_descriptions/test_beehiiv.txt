@@ -1,0 +1,32 @@
+Solutions Engineer (Remote)
+Company: beehiiv
+Location: Remote (US)
+Compensation: $130,000 - $140,000 / year
+Department: Sales
+
+About beehiiv:
+We're empowering creators to create, monetize, and grow by building the most powerful and robust newsletter platform, built by newsletter people. And we're only just getting started 🚀
+
+We're looking for a Solutions Engineer to join our growing team. You'll work closely with our sales team and potential customers to demonstrate the technical capabilities of our platform and help solve complex integration challenges.
+
+Key Responsibilities:
+- Lead technical discovery calls and product demonstrations
+- Build proof-of-concept implementations and custom integrations
+- Provide technical consultation during the sales process
+- Create technical documentation and implementation guides
+- Collaborate with engineering on customer requirements
+
+Requirements:
+- Strong background in web technologies and APIs
+- Experience with newsletter platforms or publishing systems
+- Excellent communication skills and ability to explain technical concepts
+- Background in customer-facing technical roles
+- Experience with JavaScript, Python, or similar languages
+- Understanding of email systems and deliverability
+
+We offer:
+- Competitive salary ($130,000 - $140,000)
+- Fully remote work environment
+- Comprehensive healthcare benefits
+- Flexible PTO policy
+- Professional development opportunities

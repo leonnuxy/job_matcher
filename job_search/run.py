@@ -34,6 +34,8 @@ def main():
                        help="Don't use Google Custom Search API")
     parser.add_argument("--max-jobs", type=int, default=10, 
                        help="Maximum jobs to fetch per board/location")
+    parser.add_argument("--with-cover-letter", action="store_true", 
+                       help="Generate cover letters alongside optimized resumes")
     args = parser.parse_args()
     
     # Set simulation mode environment variable if requested
@@ -77,14 +79,14 @@ def main():
     elif args.match_only:
         # Run only job matching
         logging.info("Running job matching only...")
-        matcher_main()
+        matcher_main(args.with_cover_letter)
     else:
         # Run both
         logging.info("Running job search and matching...")
         import sys
         sys.argv = [sys.argv[0]] + search_args
         search_main()
-        matcher_main()
+        matcher_main(args.with_cover_letter)
     
     logging.info("Process complete!")
 
