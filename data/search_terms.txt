@@ -1,16 +1,8 @@
-# List your job search queries, one per line.
-# Format: search term, location, recency_in_hours
-# Recency values: 0.1 (6 min), 1hr, 5hrs, 24hrs, 72hrs (or any number)
-# Examples: 
-# Python developer, Calgary, 24
-# DevOps engineer, Edmonton, 72
-Python developer, Calgary, 24
-DevOps engineer, Edmonton, 72 
-Cloud architect, Toronto, 24
-Machine learning engineer, Vancouver, 5
-Software engineer, Remote, 1
-Backend developer, Montreal, 0.1
+Python developer, Calgary
+DevOps engineer, Edmonton, 48
+Cloud architect, Toronto, 48
+Machine learning engineer
+Software engineer, Remote, 24
+Backend developer, Remote, 48
 Data scientist, Winnipeg, 24
-UX/UI designer, Ottawa, 72
-Technical writer, Victoria, 5
-Mobile app developer, Halifax, 1
+Technical writer, Victoria, 24

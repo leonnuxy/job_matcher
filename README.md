@@ -53,9 +53,45 @@ The project is organized into several modules:
         - Set LLM provider environment variable: `export LLM_PROVIDER=openai`
     *   **Important:** Do not commit your API keys to a public repository. Use environment variables instead.
 
-4.  **Prepare your files:**
-    * Place your resume in `data/resume.txt` (plain text format)
-    * Create `data/search_terms.txt` with one job search keyword per line (lines starting with # are ignored)
+4. **Prepare your files**
+
+   1. **Resume**  
+      Place your plain-text resume at  
+      ```
+      data/resume.txt
+      ```
+
+   2. **Search terms**  
+      Create a file at  
+      ```
+      data/search_terms.txt
+      ```  
+      Each non-comment line should follow this CSV-style format:
+      ```
+      search_term, location, recency_in_hours
+      ```
+      - Lines beginning with `#` are ignored.  
+      - `recency_in_hours` is a number (e.g. `0.1` = 6 minutes, `1` = 1 hour, `24` = 1 day, etc.).
+
+      **Example `data/search_terms.txt`:**
+      ```txt
+      # List your queries, one per line:
+      # Format: search_term, location, recency_in_hours
+      # Recency values: 0.1 (6 min), 1 (1 hr), 5 (5 hrs), 24 (24 hrs), 72 (3 days)
+
+      Python developer, Calgary, 48
+      DevOps engineer, Edmonton, 72
+      Cloud architect, Toronto, 48
+      Machine learning engineer, Vancouver, 5
+      Software engineer, Remote, 1
+      Backend developer, Montreal, 0.1
+      Data scientist, Winnipeg, 24
+      UX/UI designer, Ottawa, 72
+      Technical writer, Victoria, 5
+      Mobile app developer, Halifax, 1
+      ```
+
+
 
 5.  **Database setup:**
     * The application uses a MySQL database to store job search results
