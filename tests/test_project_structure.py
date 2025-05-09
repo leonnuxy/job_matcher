@@ -12,7 +12,7 @@ def test_project_structure():
     # Check required files exist
     assert os.path.isfile(os.path.join(base_path, 'config.py'))
     assert os.path.isfile(os.path.join(base_path, 'prompt.txt'))
-    assert os.path.isfile(os.path.join(base_path, 'optimize.py'))
+    assert os.path.isfile(os.path.join(base_path, 'optimizer', 'optimize.py'))
     assert os.path.isfile(os.path.join(base_path, 'main.py'))
     assert os.path.isfile(os.path.join(base_path, 'requirements.txt'))
     

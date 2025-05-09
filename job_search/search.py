@@ -1,4 +1,3 @@
-# filepath: /Users/noel/Documents/Projects-Local/job_matcher/job_search/search.py
 """
 Job search functionality that leverages scraping services.
 """

@@ -34,3 +34,12 @@ logs/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Temporary files
+*job_search_results
+*optimization_results
+
+*latest_resume.md
+*latest_cover_letter.md
+data/optimization_results/latest_resume.md
+data/optimization_results/latest_cover_letter.md

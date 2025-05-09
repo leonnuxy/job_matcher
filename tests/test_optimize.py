@@ -3,7 +3,7 @@ Tests for the optimize.py module.
 """
 import pytest
 from unittest.mock import patch, MagicMock
-from optimize import optimize_resume
+from optimizer.optimize import optimize_resume
 
 class DummyLLMClient:
     def __init__(self, model_name):
@@ -19,7 +19,7 @@ def patch_llm_client(monkeypatch):
     
     # Stub out the real LLM client
     mock_client = DummyLLMClient("test-model")
-    monkeypatch.setattr('optimize.client', mock_client)
+    monkeypatch.setattr('optimizer.optimize.client', mock_client)
 
 def test_optimize_resume_basic():
     resume = "Name: Jane Doe\nExperience: Python developer."
