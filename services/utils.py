@@ -221,4 +221,47 @@ def extract_company_from_url(url: str) -> str:
     
     return "Unknown"
 
+def save_optimized_resume(content: str, job_title: str = "", job_company: str = "") -> str:
+    """
+    Save an optimized resume to a file with proper formatting.
+    
+    Args:
+        content: The content of the optimized resume
+        job_title: Optional job title for the filename
+        job_company: Optional company name for the filename
+        
+    Returns:
+        str: The path to the saved resume file
+    """
+    # Create the output directory if it doesn't exist
+    output_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                             "data", "optimization_results")
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Create a filename based on job details and timestamp
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    job_info = ""
+    if job_title or job_company:
+        job_info = f"_{job_title.replace(' ', '_')}_{job_company.replace(' ', '_')}"
+    
+    filename = f"optimized_resume{job_info}_{timestamp}.md"
+    filepath = os.path.join(output_dir, filename)
+    
+    # Create a symlink to the latest resume
+    latest_path = os.path.join(output_dir, "latest_resume.md")
+    
+    # Write the optimized resume to the file
+    with open(filepath, "w") as f:
+        f.write(content)
+    
+    # Update the "latest" symlink
+    try:
+        if os.path.exists(latest_path):
+            os.remove(latest_path)
+        os.symlink(os.path.basename(filepath), latest_path)
+    except Exception as e:
+        pass  # Symlink creation is not critical
+        
+    return filepath
+
 
