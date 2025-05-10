@@ -1,5 +1,6 @@
 """
 Script to run the FastAPI server for the job_matcher API.
+Now serves as a library module for the unified CLI in main.py.
 """
 import uvicorn
 import os
@@ -12,7 +13,11 @@ if parent_dir not in sys.path:
 
 def main():
     """Run the FastAPI server."""
-    uvicorn.run("api.api:app", host="127.0.0.1", port=8000, reload=True)
+    # Get port and host from environment variables if set
+    port = int(os.environ.get("API_PORT", 8000))
+    host = os.environ.get("API_HOST", "127.0.0.1")
+    uvicorn.run("api.api:app", host=host, port=port, reload=True)
 
 if __name__ == "__main__":
-    main()
+    from main import main as unified_main
+    unified_main()

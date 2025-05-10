@@ -13,6 +13,10 @@ The project is organized into several modules:
   - `llm_client.py` - Client for interacting with AI language models
   - `utils.py` - Utility functions for file handling and more
   - `scraper.py` - Robust job board scraping functionality
+  - `linkedin.py` - LinkedIn-specific functionality including API and HTML parsing
+  - `http_client.py` - HTTP client utilities
+  - `html_fallback.py` - HTML parsing fallbacks for website scraping
+  - `config.py` - Configuration settings
   
 - **api/** - API functionality
   - `api.py` - FastAPI endpoints for resume optimization
@@ -65,6 +69,60 @@ The project is organized into several modules:
       Create a file at  
       ```
       data/search_terms.txt
+      ```
+
+## Unified Command-Line Interface
+
+The project now features a unified CLI system with subcommands for all functionality:
+
+```bash
+# Main usage pattern
+python main.py [command] [options]
+```
+
+### Available Commands
+
+- **optimize**: Optimize resume for a specific job description
+  ```bash
+  python main.py optimize --job "data/job_descriptions/job_description.txt" --resume "data/resume.txt"
+  ```
+
+- **search**: Search for jobs across multiple platforms
+  ```bash
+  python main.py search --terms "Python Developer" --locations "Remote" "Canada"
+  ```
+
+- **match**: Calculate match scores for job listings against a resume
+  ```bash
+  python main.py match --min-score 0.6 --resume "data/resume.txt"
+  ```
+
+- **linkedin**: Process and analyze LinkedIn job postings
+  ```bash
+  # Process a single LinkedIn job URL
+  python main.py linkedin --url "https://www.linkedin.com/jobs/view/123456789"
+  
+  # Process a LinkedIn search URL
+  python main.py linkedin --search-url "https://www.linkedin.com/jobs/search?keywords=python&location=canada"
+  
+  # Process from job search results
+  python main.py linkedin --input "data/job_search_results/job_search_latest.json"
+  ```
+
+- **api**: Start the FastAPI server for the web interface
+  ```bash
+  python main.py api --port 8000
+  ```
+
+- **all**: Run the entire job search, match, and analysis pipeline
+  ```bash
+  python main.py all --terms "Software Engineer" --process-linkedin
+  ```
+
+For detailed help on any command:
+```bash
+python main.py [command] --help
+```
       ```  
       Each non-comment line should follow this CSV-style format:
       ```
@@ -421,6 +479,26 @@ The script generates two output formats:
    - Table of contents with jobs sorted by match score
    - Detailed job information including title, company, location, status, and description excerpt
 
+
+## Cleaning Up and Maintenance
+
+To keep your repository tidy and free of clutter from old outputs, test artifacts, and redundant files, use the provided cleanup script:
+
+```bash
+zsh cleanup.sh
+```
+
+This script will:
+- Remove all `__pycache__/` folders and Python bytecode
+- Move legacy, backup, and old output files to the `archive/` folder
+- Delete unnecessary test artifacts and duplicate files
+- Help maintain a clean, professional project structure
+
+**Tip:** Review the script before running to ensure it matches your current cleanup needs. You can also adapt it for custom archiving or deletion rules as your project evolves.
+
+Encourage all contributors to run this script regularly, especially before making pull requests or sharing the repository.
+
+---
 ## Google Custom Search API Integration
 
 This project includes integration with Google Custom Search API for more reliable job searching. To use this feature:

@@ -1,5 +1,6 @@
 """
 Script to run the job search and matching process.
+Now serves as a library module for the unified CLI in main.py.
 """
 import argparse
 import logging
@@ -91,4 +92,5 @@ def main():
     logging.info("Process complete!")
 
 if __name__ == "__main__":
-    main()
+    from main import main as unified_main
+    unified_main()

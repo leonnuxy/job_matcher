@@ -21,11 +21,8 @@ import json
 import logging
 import os
 import sys
-import re
 import time
 from typing import Dict, Any, Optional, List
-import requests
-from bs4 import BeautifulSoup
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -37,113 +34,12 @@ if __name__ == "__main__" and __package__ is None:
 # Import project modules
 from services.scraper import ensure_job_descriptions
 from services.html_fallback import extract_job_details
+from services.linkedin import (
+    extract_job_id_from_url,
+    fetch_job_via_api,
+    extract_jobs_from_search_url
+)
 from job_search.matcher import calculate_match_score
-from job_search.enhanced_parser import parse_job_details, text_or_none
-
-# Constants for LinkedIn API access
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-REQUEST_TIMEOUT = 10  # seconds
-
-
-def fetch_linkedin_job_details(job_url: str, save_html: bool = False) -> Dict:
-    """
-    Fetch job details from LinkedIn's guest API using the job ID.
-    
-    Args:
-        job_url: URL of the LinkedIn job posting
-        save_html: Whether to save the raw HTML response for debugging
-        
-    Returns:
-        Dictionary with job details or empty dict if retrieval fails
-    """
-    try:
-        # Extract job ID from the URL
-        job_id = extract_job_id_from_url(job_url)
-        if not job_id:
-            logging.error(f"Could not extract job ID from URL: {job_url}")
-            return {}
-        
-        # Construct the guest API URL
-        guest_api_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
-        
-        logging.info(f"Fetching LinkedIn job details from guest API: {guest_api_url}")
-        
-        # Create a session to maintain headers
-        session = requests.Session()
-        session.headers.update({
-            "User-Agent": USER_AGENT,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-        })
-        
-        # Make the request
-        resp = session.get(guest_api_url, timeout=REQUEST_TIMEOUT)
-        
-        # Check if request was successful
-        if resp.status_code != 200:
-            logging.error(f"LinkedIn API request failed with status code {resp.status_code}")
-            return {}
-            
-        # Check if we got a proper HTML response (not empty or redirected)
-        if len(resp.text) < 1000:
-            logging.warning(f"LinkedIn API response too short ({len(resp.text)} bytes), might be throttled")
-            
-        resp.raise_for_status()
-        
-        # Save the raw HTML response if requested
-        if save_html:
-            html_dir = os.path.join("data", "linkedin_html")
-            os.makedirs(html_dir, exist_ok=True)
-            html_file = os.path.join(html_dir, f"linkedin_{job_id}_{int(time.time())}.html")
-            
-            try:
-                with open(html_file, "w", encoding="utf-8") as f:
-                    f.write(resp.text)
-                logging.info(f"Saved raw HTML response to {html_file}")
-            except Exception as e:
-                logging.error(f"Failed to save HTML response: {e}")
-        
-        # Parse the HTML response
-        soup = BeautifulSoup(resp.text, "lxml")
-        
-        # Check job status
-        job_info = {'is_active': check_job_status(soup)}
-            
-        # Extract job title
-        title = extract_job_title(soup)
-        if title:
-            job_info["title"] = title
-        
-        # Use enhanced_parser to extract job details
-        job_details = parse_job_details(soup)
-        job_info.update(job_details)
-            
-        # Add additional LinkedIn specific data
-        # Company name
-        company_elem = soup.select_one("a.topcard__org-name-link")
-        if company_elem:
-            job_info["company"] = company_elem.get_text(strip=True)
-        
-        # Posted date
-        date_elem = soup.select_one("span.posted-time-ago__text")
-        if date_elem:
-            job_info["posted"] = date_elem.get_text(strip=True)
-            
-        # If we found a description, return the job info
-        if job_info.get("description"):
-            job_info["link"] = job_url
-            return job_info
-            
-        logging.warning("Could not find job description in LinkedIn guest API response")
-        return {}
-        
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Request error fetching LinkedIn job: {e}")
-        return {}
-        
-    except Exception as e:
-        logging.error(f"Error processing LinkedIn job: {e}")
-        return {}
 
 
 # Helper function to load text files
@@ -184,7 +80,7 @@ def analyze_job(job_url: str, job_info: Optional[Dict] = None, resume_path: str 
     # Create minimal job info if not provided
     if job_info is None:
         # Try to get job details from LinkedIn guest API first
-        linkedin_job_info = fetch_linkedin_job_details(job_url)
+        linkedin_job_info = fetch_job_via_api(job_url)
         
         if linkedin_job_info and linkedin_job_info.get("description"):
             job_info = linkedin_job_info
@@ -286,318 +182,114 @@ def extract_job_info_from_url(job_url: str) -> Dict[str, Any]:
     }
 
 
-def check_job_status(soup: BeautifulSoup) -> bool:
+def filter_linkedin_jobs(job_file: str, min_score: float = 0) -> List[Dict]:
     """
-    Check if the job posting is still active.
+    Filter job search results to include only LinkedIn jobs.
     
     Args:
-        soup: BeautifulSoup object from LinkedIn job page
+        job_file: Path to job search results JSON file
+        min_score: Minimum match score to include
         
     Returns:
-        True if job is active, False otherwise
-    """
-    # Messages that indicate the job is no longer active
-    inactive_patterns = [
-        "no longer accepting applications",
-        "job is no longer available",
-        "position has been filled",
-        "this job has expired",
-        "not available anymore"
-    ]
-    
-    # Check for inactive messages
-    for pattern in inactive_patterns:
-        if soup.find(string=re.compile(pattern, re.IGNORECASE)):
-            logging.info(f"Job is inactive: {pattern} message detected")
-            return False
-    
-    # Also check if there's an "apply" button - if not, job might be inactive
-    apply_selectors = [
-        ".apply-button", 
-        "[data-control-name='jobdetails_apply']",
-        ".jobs-apply-button",
-        ".jobs-s-apply"
-    ]
-    
-    apply_button = text_or_none(soup, apply_selectors)
-    if not apply_button:
-        # Double-check with text pattern since this is less reliable
-        if soup.find(string=re.compile("apply on company site", re.IGNORECASE)):
-            # There's still a way to apply, so job is likely active
-            return True
-        else:
-            logging.info("Job appears inactive: No apply button detected")
-            return False
-            
-    return True
-
-
-def extract_job_title(soup: BeautifulSoup) -> Optional[str]:
-    """
-    Extract the job title from the HTML.
-    
-    Args:
-        soup: BeautifulSoup object from LinkedIn job page
-        
-    Returns:
-        Job title as string or None if not found
-    """
-    # Try specific LinkedIn selectors first
-    title_selectors = [
-        "h1.top-card-layout__title",
-        "h1.job-title",
-        ".job-details-jobs-unified-top-card__job-title",
-        ".job-title"
-    ]
-    
-    title = text_or_none(soup, title_selectors)
-    if title:
-        return title
-    
-    # Try to extract from description if available
-    description = soup.get_text()
-    if "Robotics Software Developer" in description:
-        return "Robotics Software Developer"
-    
-    # Try to extract job title from description
-    match = re.search(r'looking for a[n]?\s+motivated\s+([^.]+)', description, re.IGNORECASE)
-    if match:
-        return match.group(1).strip()
-        
-    return None
-
-
-def extract_job_id_from_url(url):
-    """
-    Extract the LinkedIn job ID from a job URL.
-    
-    Args:
-        url: LinkedIn job URL
-        
-    Returns:
-        Job ID as string or None if not found
-    """
-    # Try different URL patterns
-    patterns = [
-        r'view/([^/]+)-at-[^/]+-(\d+)',  # Standard LinkedIn job URL
-        r'jobs/view/([^/]+)/(\d+)',      # Alternative format
-        r'jobs/view/.*?-(\d+)',          # Format with just ID at the end
-        r'jobs/view/(\d+)'               # Direct ID format
-    ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, url)
-        if match:
-            # Return the numeric job ID if it's in the second group
-            if len(match.groups()) > 1:
-                return match.group(2)
-            # Otherwise return the first group
-            return match.group(1)
-    
-    return None
-
-
-def extract_jobs_from_search_url(search_url: str, max_jobs: Optional[int] = None) -> List[Dict[str, Any]]:
-    """
-    Extract individual job listings from a LinkedIn search result URL.
-    
-    Args:
-        search_url: LinkedIn search URL
-        max_jobs: Maximum number of jobs to extract (None for all)
-        
-    Returns:
-        List of job dictionaries with basic information
+        List of LinkedIn job dictionaries
     """
     try:
-        logging.info(f"Extracting job listings from search URL: {search_url}")
+        if not os.path.exists(job_file):
+            logging.error(f"Job search results file not found: {job_file}")
+            return []
         
-        # Create a session to maintain headers
-        session = requests.Session()
-        session.headers.update({
-            "User-Agent": USER_AGENT,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-        })
+        with open(job_file, 'r') as f:
+            job_results = json.load(f)
         
-        # Make the request
-        resp = session.get(search_url, timeout=REQUEST_TIMEOUT)
-        resp.raise_for_status()
-        
-        # Parse the HTML response
-        soup = BeautifulSoup(resp.text, "lxml")
-        
-        # Extract job listings
-        job_listings = []
-        job_cards = soup.select(".job-search-card")
-        
-        if not job_cards:
-            # Try alternative selectors
-            job_cards = soup.select(".jobs-search-results__list-item")
-        
-        if not job_cards:
-            logging.warning(f"No job cards found in search results: {search_url}")
-            # Try to extract any links that might be job postings
-            all_links = soup.select("a[href*='/jobs/view/']")
-            for link in all_links:
-                job_url = link.get('href', '')
-                if '/jobs/view/' in job_url:
-                    if not job_url.startswith('http'):
-                        job_url = f"https://www.linkedin.com{job_url}"
-                    
-                    # Create a minimal job info dictionary
-                    job_listings.append({
-                        'url': job_url,
-                        'id': extract_job_id_from_url(job_url),
-                        'title': link.get_text(strip=True) or "Unknown Title",
-                        'company': "Unknown Company",
-                        'location': "Unknown Location",
-                        'match_score': 0
-                    })
+        # Check if the file has a 'jobs' field (our standard format)
+        if isinstance(job_results, dict) and 'jobs' in job_results:
+            jobs = job_results['jobs']
+        elif isinstance(job_results, list):
+            jobs = job_results
         else:
-            # Process each job card
-            for card in job_cards:
-                # Extract job link using enhanced parser's link_or_none
-                job_link_selectors = ["a.job-card-container__link", "a[href*='/jobs/view/']"]
-                job_url = None
-                
-                for selector in job_link_selectors:
-                    link_elem = card.select_one(selector)
-                    if link_elem and link_elem.has_attr('href'):
-                        job_url = link_elem['href']
-                        if not job_url.startswith('http'):
-                            job_url = f"https://www.linkedin.com{job_url}"
-                        break
-                
-                if not job_url:
-                    continue
-                
-                # Extract job title and other details with text_or_none
-                title_selectors = [".job-card-list__title", ".job-card-container__link"]
-                company_selectors = [".job-card-container__company-name", ".job-card-container__subtitle"]
-                location_selectors = [".job-card-container__metadata-wrapper", ".job-card-container__metadata"]
-                
-                title = text_or_none(card, title_selectors) or "Unknown Title"
-                company = text_or_none(card, company_selectors) or "Unknown Company"
-                location = text_or_none(card, location_selectors) or "Unknown Location"
-                
-                # Add to job listings
-                job_listings.append({
-                    'url': job_url,
-                    'id': extract_job_id_from_url(job_url),
-                    'title': title,
-                    'company': company,
-                    'location': location,
-                    'match_score': 0
-                })
+            logging.error(f"Invalid job search results format in {job_file}")
+            return []
         
-        # Limit the number of jobs if specified
-        if max_jobs is not None and max_jobs > 0:
-            job_listings = job_listings[:max_jobs]
-            
-        logging.info(f"Extracted {len(job_listings)} job listings from search URL")
-        return job_listings
-        
-    except Exception as e:
-        logging.error(f"Error extracting jobs from search URL: {e}")
-        return []
-
-
-def filter_linkedin_jobs(job_search_file):
-    """
-    Filter LinkedIn job URLs from a job search results file.
-    
-    Args:
-        job_search_file: Path to the job search results JSON file
-        
-    Returns:
-        List of LinkedIn job URLs
-    """
-    try:
-        with open(job_search_file, 'r') as f:
-            job_search_data = json.load(f)
-        
+        # Filter to include only LinkedIn jobs
         linkedin_jobs = []
-        seen_job_ids = set()
-        
-        # Extract LinkedIn job URLs from the job search data
-        if 'scored_jobs' in job_search_data:
-            for job in job_search_data['scored_jobs']:
-                if job.get('link') and 'linkedin.com/jobs/view/' in job.get('link', ''):
-                    job_url = job.get('link')
-                    job_id = extract_job_id_from_url(job_url)
+        for job in jobs:
+            job_link = job.get('link', job.get('url', ''))
+            if 'linkedin.com/jobs/view/' in job_link:
+                # Extract the job ID from URL
+                job_id = extract_job_id_from_url(job_link)
+                if job_id:
+                    # Add ID to job object
+                    job['id'] = job_id
+                    job['url'] = job_link  # Ensure consistent URL field
                     
-                    # Skip if we've already seen this job ID
-                    if job_id in seen_job_ids:
-                        logging.debug(f"Skipping duplicate job ID: {job_id}")
-                        continue
+                    # Include jobs with score above minimum
+                    if job.get('match_score', 0) >= min_score:
+                        linkedin_jobs.append(job)
                         
-                    # Add to seen job IDs
-                    if job_id:
-                        seen_job_ids.add(job_id)
-                    
-                    linkedin_jobs.append({
-                        'url': job_url,
-                        'id': job_id,
-                        'title': job.get('title'),
-                        'company': job.get('company'),
-                        'location': job.get('location'),
-                        'snippet': job.get('snippet'),
-                        'match_score': job.get('match_score', 0)
-                    })
-        
-        logging.info(f"Found {len(linkedin_jobs)} unique LinkedIn jobs in the search results")
+        logging.info(f"Found {len(linkedin_jobs)} LinkedIn jobs from {job_file}")
         return linkedin_jobs
-    
+        
     except Exception as e:
-        logging.error(f"Error reading job search file {job_search_file}: {e}")
+        logging.error(f"Error loading job file {job_file}: {e}")
         return []
 
 
-def process_linkedin_jobs(linkedin_jobs, resume_path="data/resume.txt", max_jobs=None, use_api=False, save_html=False):
+def process_linkedin_jobs(jobs: List[Dict], resume_path: str, max_jobs: Optional[int] = None, use_api: bool = True, save_html: bool = False) -> List[Dict]:
     """
-    Process a list of LinkedIn jobs and save the results.
+    Process multiple LinkedIn jobs.
     
     Args:
-        linkedin_jobs: List of LinkedIn job dictionaries with URL and basic info
-        resume_path: Path to the resume file
-        max_jobs: Maximum number of jobs to process (None for all)
-        use_api: Whether to use LinkedIn guest API instead of fallback method
-        save_html: Whether to save raw HTML responses for debugging
+        jobs: List of job dictionaries with LinkedIn job URLs
+        resume_path: Path to resume file
+        max_jobs: Maximum number of jobs to process
+        use_api: Whether to use LinkedIn guest API
+        save_html: Whether to save raw HTML responses
         
     Returns:
-        List of processed job results
+        List of job dictionaries with analysis results
     """
+    if max_jobs is not None and max_jobs > 0:
+        jobs = jobs[:max_jobs]
+    
+    total_jobs = len(jobs)
+    logging.info(f"Processing {total_jobs} LinkedIn jobs")
+    
+    # Load resume once for efficiency
+    resume_text = load_text_file(resume_path)
+    if not resume_text:
+        logging.error(f"Failed to load resume from {resume_path}")
+        return []
+    
     results = []
-    
-    # Limit the number of jobs if specified
-    if max_jobs is not None:
-        linkedin_jobs = linkedin_jobs[:max_jobs]
-    
-    # Process each LinkedIn job
-    total_jobs = len(linkedin_jobs)
-    for i, job in enumerate(linkedin_jobs):
-        job_url = job['url']
-        logging.info(f"Processing job {i+1}/{total_jobs}: {job['title']} at {job['company']}")
+    for i, job in enumerate(jobs):
+        job_url = job.get('url', job.get('link', ''))
+        if not job_url:
+            logging.warning(f"Job {i+1} has no URL, skipping")
+            continue
         
-        # Create initial job info with basic data from search results
+        logging.info(f"Processing job {i+1}/{total_jobs}: {job_url}")
+        
+        # Create initial job info
         initial_job_info = {
-            'title': job['title'],
-            'company': job['company'],
-            'location': job['location'],
+            'title': job.get('title', 'Unknown Title'),
+            'company': job.get('company', 'Unknown Company'),
+            'location': job.get('location', ''),
             'link': job_url,
-            'search_match_score': job['match_score']  # Store original match score from search
+            'id': job.get('id', extract_job_id_from_url(job_url))
         }
         
+        # Use the LinkedIn guest API if requested
         if use_api:
-            # Try to get job details from LinkedIn guest API first
-            api_job_info = fetch_linkedin_job_details(job_url, save_html)
+            logging.info(f"Using LinkedIn guest API for job {i+1}")
+            api_job_info = fetch_job_via_api(job_url, save_html=save_html)
             
             if api_job_info and api_job_info.get("description"):
-                # Add search match score to API results
-                api_job_info['search_match_score'] = job['match_score']
+                # Ensure we have all basic info
+                for field in ['title', 'company', 'location']:
+                    if not api_job_info.get(field) and initial_job_info.get(field):
+                        api_job_info[field] = initial_job_info.get(field)
                 
-                # Calculate match score against resume
-                resume_text = load_text_file(resume_path)
+                # Calculate match score
                 if resume_text:
                     api_job_info['match_score'] = calculate_match_score(resume_text, api_job_info)
                     logging.info(f"Match score: {api_job_info['match_score']:.2f}")
@@ -746,9 +438,6 @@ def save_and_export_results(job_results, output_path, export_md=False, source_in
 
 def main():
     """Main entry point for the LinkedIn job scraper"""
-    # Set to false to try actual scraping
-    os.environ["SIMULATION_MODE"] = "false"
-    
     # Parse command-line arguments
     import argparse
     parser = argparse.ArgumentParser(description="Process LinkedIn jobs from search results")
@@ -993,4 +682,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from main import main as unified_main
+    unified_main()

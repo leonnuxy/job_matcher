@@ -10,17 +10,30 @@ from .config import USER_AGENT
 from .utils import regex_search
 from urllib.parse import urljoin, urlparse
 import requests
+from .http_client import fetch_url
 
-
-
+# Simulation mode flag for testing
 SIMULATION_MODE = os.getenv("SIMULATION_MODE", "false").lower() in ("true", "1", "yes")
-session = requests.Session()
 
 
 def extract_job_listings(soup: BeautifulSoup, base_url: str) -> List[Dict]:
+    """
+    Extract job listings from a page based on the domain.
+    LinkedIn extraction is now handled in services.linkedin module.
+    
+    Args:
+        soup: BeautifulSoup object of the page
+        base_url: Original URL of the page for domain detection
+        
+    Returns:
+        List of job dictionaries with title, company, location, link
+    """
     domain = urlparse(base_url).netloc.lower()
-    if "linkedin.com"   in domain: return _extract_linkedin(soup)
-    if "indeed."       in domain: return _extract_indeed(soup)
+    if "linkedin.com" in domain:
+        # LinkedIn is now handled by services.linkedin module
+        from services.linkedin import extract_jobs_from_search_html
+        return extract_jobs_from_search_html(soup)
+    if "indeed." in domain: return _extract_indeed(soup)
     if "glassdoor.com" in domain: return _extract_glassdoor(soup)
     return _extract_generic(soup, base_url)
 
@@ -48,16 +61,7 @@ def _link_or_none(soup: BeautifulSoup, selector: str, base: Optional[str] = None
         return urljoin(base, href) if base else href
     return None
 
-def _extract_linkedin(soup: BeautifulSoup) -> List[Dict]:
-    jobs = []
-    for card in soup.select('.job-card-container, .jobs-search-results__list-item'):
-        title = _text_or_none(card, ['.job-card-list__title', '.job-card-container__link'])
-        link  = _link_or_none(card, 'a.job-card-container__link', base='https://www.linkedin.com')
-        comp  = _text_or_none(card, ['.job-card-container__company-name', '.jobs-search-results__company-name'])
-        loc   = _text_or_none(card, ['.job-card-container__metadata-item', '.job-card-container__metadata-location'])
-        if title and link:
-            jobs.append({'title': title, 'company': comp, 'location': loc, 'link': link})
-    return jobs
+# LinkedIn extraction code moved to services/linkedin.py
 
 
 def _extract_indeed(soup: BeautifulSoup) -> List[Dict]:
@@ -145,8 +149,9 @@ def extract_job_details(job_url: str, job_info: Optional[Dict] = None) -> Dict:
             'Cache-Control': 'max-age=0'
         }
         
-        resp = session.get(job_url, headers=headers, timeout=REQUEST_TIMEOUT)
-        resp.raise_for_status()
+        resp = fetch_url(job_url, headers=headers, timeout=REQUEST_TIMEOUT)
+        if not resp:
+            raise requests.exceptions.RequestException("Failed to fetch URL")
         
         # Parse the HTML response
         soup = BeautifulSoup(resp.text, 'lxml')
