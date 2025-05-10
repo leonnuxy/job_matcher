@@ -306,7 +306,7 @@ def main():
     os.environ["SIMULATION_MODE"] = "false"
     
     # Define the specific job URL to test
-    specific_url = "https://careers.beehiiv.com/en/postings/5309bab1-b5a6-40bd-b4f2-3f9fb4c5fc87"
+    specific_url = "https://ca.linkedin.com/jobs/view/robotics-software-developer-at-novarc-technologies-inc-4219164109"
     
     logging.info(f"Testing HTML fallback scraper with specific job URL: {specific_url}")
     print(f"Testing URL: {specific_url}")

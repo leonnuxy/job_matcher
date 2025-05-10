@@ -83,12 +83,6 @@ The project is organized into several modules:
       DevOps engineer, Edmonton, 72
       Cloud architect, Toronto, 48
       Machine learning engineer, Vancouver, 5
-      Software engineer, Remote, 1
-      Backend developer, Montreal, 0.1
-      Data scientist, Winnipeg, 24
-      UX/UI designer, Ottawa, 72
-      Technical writer, Victoria, 5
-      Mobile app developer, Halifax, 1
       ```
 
 
@@ -309,6 +303,123 @@ The results include:
 - Web scraping can be fragile. Job board websites may change their layout, breaking the scraper.
 - ATS analysis is simulated and may not accurately reflect the behavior of real ATS systems.
 - Results are stored in JSON files in the `data/job_search_results/` directory
+
+## LinkedIn Job Scraper
+
+The project includes a dedicated LinkedIn job scraper (`process_linkedin_job.py`) that can extract and analyze LinkedIn job postings in detail.
+
+### Features
+
+- Extract job details from LinkedIn job postings using LinkedIn's guest API
+- Check job status (active/inactive)
+- Calculate match scores against your resume
+- Export results to JSON and Markdown formats
+- Process multiple LinkedIn jobs from search results or a single job URL
+- Process LinkedIn search result URLs to extract job listings
+- Process multiple URLs from a text file
+- Filter jobs by minimum match score
+- Save raw HTML responses for debugging
+
+### Usage
+
+#### Process a Single LinkedIn Job
+
+To analyze a single LinkedIn job posting:
+
+```bash
+python process_linkedin_job.py --url "https://www.linkedin.com/jobs/view/job-title-at-company-jobid"
+```
+
+#### Process LinkedIn Jobs from Search Results JSON
+
+To analyze multiple LinkedIn jobs from search results:
+
+```bash
+python process_linkedin_job.py --input "data/job_search_results/job_search_results.json"
+```
+
+#### Process a LinkedIn Search URL
+
+To extract and analyze jobs from a LinkedIn search URL:
+
+```bash
+python process_linkedin_job.py --search-url "https://www.linkedin.com/jobs/search/?keywords=software%20developer"
+```
+
+#### Process URLs from a Text File
+
+To process multiple LinkedIn job or search URLs from a text file:
+
+```bash
+python process_linkedin_job.py --url-file "data/linkedin_urls.txt"
+```
+
+The text file should contain one URL per line. Both job URLs and search URLs are supported:
+
+```
+https://www.linkedin.com/jobs/view/job-title-at-company-jobid
+https://www.linkedin.com/jobs/search/?keywords=software%20developer
+```
+
+Lines starting with `//` are treated as comments and ignored.
+
+#### Command Line Options
+
+```
+--input, -i          Path(s) to job search results JSON file(s)
+--output, -o         Path to output JSON file (default: data/job_descriptions/linkedin_jobs_analysis.json)
+--resume, -r         Path to resume text file (default: data/resume.txt)
+--max-jobs, -m       Maximum number of jobs to process (default: 5)
+--use-api, -a        Use LinkedIn guest API instead of fallback method
+--save-html, -s      Save raw HTML responses from LinkedIn API for debugging
+--min-score, -ms     Minimum search match score to process (0.0 to 1.0)
+--export-md, -md     Export results to Markdown format
+--verbose, -v        Enable verbose output
+--url, -u            Process a single LinkedIn job URL
+--url-file, -uf      Path to a text file containing LinkedIn job or search URLs, one per line
+--search-url, -su    Process a LinkedIn search results URL to extract job listings
+```
+
+#### Examples
+
+Process a single job URL and export to Markdown:
+```bash
+python process_linkedin_job.py --url "https://www.linkedin.com/jobs/view/python-developer-at-techcorp-12345" --export-md
+```
+
+Process top 10 jobs from search results with minimum score of 0.6:
+```bash
+python process_linkedin_job.py --input "data/job_search_results/job_search_2025.json" --max-jobs 10 --min-score 0.6 --export-md
+```
+
+Process a LinkedIn search URL with a maximum of 15 jobs:
+```bash
+python process_linkedin_job.py --search-url "https://www.linkedin.com/jobs/search/?keywords=software%20developer" --max-jobs 15 --export-md
+```
+
+Process multiple URLs from a text file:
+```bash
+python process_linkedin_job.py --url-file "data/linkedin_urls.txt" --max-jobs 5 --export-md
+```
+
+Use LinkedIn guest API and save HTML for debugging:
+```bash
+python process_linkedin_job.py --use-api --save-html
+```
+
+### Output Format
+
+The script generates two output formats:
+
+1. **JSON file** (`data/job_descriptions/linkedin_jobs_analysis.json`) containing:
+   - Metadata (generation time, source files, job count by match score)
+   - Complete job details for each processed job
+   - Match scores against your resume
+
+2. **Markdown report** (optional with `--export-md`) containing:
+   - Summary of job matches
+   - Table of contents with jobs sorted by match score
+   - Detailed job information including title, company, location, status, and description excerpt
 
 ## Google Custom Search API Integration
 

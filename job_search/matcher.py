@@ -5,7 +5,7 @@ import os
 import sys
 import json
 import logging
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Tuple, Optional, Any, Union
 from datetime import datetime
 
 # Add parent directory to sys.path if running as a module
@@ -114,21 +114,25 @@ def find_matching_jobs(resume: str, jobs: List[Dict], match_threshold: float = 0
     return sorted(matches, key=lambda x: x[1], reverse=True)
 
 
-def calculate_match_score(resume: str, job: Dict) -> float:
+def calculate_match_score(resume: str, job: Union[Dict, str]) -> float:
     """
     Calculate a match score between a resume and a job.
     This is a simple implementation and could be improved with more sophisticated NLP.
     
     Args:
         resume: Resume text
-        job: Job dictionary with 'description' field
+        job: Job dictionary with 'description' field or job description string
         
     Returns:
         Match score between 0 and 1
     """
     # This is a very simple implementation - would benefit from actual NLP
-    job_description = job.get('description', '')
-    job_title = job.get('title', '')
+    if isinstance(job, dict):
+        job_description = job.get('description', '')
+        job_title = job.get('title', '')
+    else:
+        job_description = job
+        job_title = "Unknown"
     
     if not job_description:
         return 0.0
