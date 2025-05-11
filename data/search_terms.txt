@@ -1,8 +1,2 @@
-Python developer, Calgary
+Python developer, Calgary, 48
 DevOps engineer, Edmonton, 48
-Cloud architect, Toronto, 48
-Machine learning engineer
-Software engineer, Remote, 24
-Backend developer, Remote, 48
-Data scientist, Winnipeg, 24
-Technical writer, Victoria, 24

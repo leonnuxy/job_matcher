@@ -65,7 +65,7 @@ def load_text_file(file_path):
         return None
 
 
-def analyze_job(job_url: str, job_info: Optional[Dict] = None, resume_path: str = "data/resume.txt") -> Dict[str, Any]:
+def analyze_job(job_url: str, job_info: Optional[Dict] = None, resume_path: str = "data/resume.txt", matching_profile=None) -> Dict[str, Any]:
     """
     Analyze a specific job URL against a resume.
     
@@ -73,6 +73,7 @@ def analyze_job(job_url: str, job_info: Optional[Dict] = None, resume_path: str 
         job_url: URL of the job to analyze
         job_info: Optional dictionary with additional job information
         resume_path: Path to the resume file
+        matching_profile: Custom matching profile with weights and mode settings
         
     Returns:
         Dictionary with job analysis details
@@ -118,8 +119,31 @@ def analyze_job(job_url: str, job_info: Optional[Dict] = None, resume_path: str 
             logging.error(f"Failed to load resume from {resume_path}")
             job_info["match_score"] = 0
         else:
+            # Use the provided matching profile or create a default one
+            if not matching_profile:
+                # Legacy support for getting parameters from args
+                import inspect
+                frame = inspect.currentframe()
+                try:
+                    # Try to get the args from the calling context
+                    args = frame.f_back.f_locals.get('args')
+                    if args and hasattr(args, 'tfidf_weight'):
+                        # Create a custom matching profile
+                        from job_search.matcher import create_matching_profile
+                        matching_profile = create_matching_profile(
+                            tfidf_weight=args.tfidf_weight,
+                            keyword_weight=args.keyword_weight, 
+                            title_weight=args.title_weight,
+                            matching_mode=args.matching_mode
+                        )
+                        logging.debug(f"Created matching profile from args: {matching_profile}")
+                except Exception as e:
+                    logging.debug(f"Could not access args for matching profile: {e}")
+                finally:
+                    del frame  # Avoid reference cycles
+                
             # Calculate match score using the matcher module
-            job_info["match_score"] = calculate_match_score(resume_text, job_info)
+            job_info["match_score"] = calculate_match_score(resume_text, job_info, matching_profile)
             logging.info(f"Match score: {job_info['match_score']:.2f}")
         
         return job_info
@@ -234,7 +258,7 @@ def filter_linkedin_jobs(job_file: str, min_score: float = 0) -> List[Dict]:
         return []
 
 
-def process_linkedin_jobs(jobs: List[Dict], resume_path: str, max_jobs: Optional[int] = None, use_api: bool = True, save_html: bool = False) -> List[Dict]:
+def process_linkedin_jobs(jobs: List[Dict], resume_path: str, max_jobs: Optional[int] = None, use_api: bool = True, save_html: bool = False, matching_profile=None) -> List[Dict]:
     """
     Process multiple LinkedIn jobs.
     
@@ -244,6 +268,7 @@ def process_linkedin_jobs(jobs: List[Dict], resume_path: str, max_jobs: Optional
         max_jobs: Maximum number of jobs to process
         use_api: Whether to use LinkedIn guest API
         save_html: Whether to save raw HTML responses
+        matching_profile: Custom matching profile with weights and mode
         
     Returns:
         List of job dictionaries with analysis results
@@ -281,7 +306,7 @@ def process_linkedin_jobs(jobs: List[Dict], resume_path: str, max_jobs: Optional
         # Use the LinkedIn guest API if requested
         if use_api:
             logging.info(f"Using LinkedIn guest API for job {i+1}")
-            api_job_info = fetch_job_via_api(job_url, save_html=save_html)
+            api_job_info = fetch_job_via_api(job_url, save_html=save_html, resume_text=resume_text, matching_profile=matching_profile)
             
             if api_job_info and api_job_info.get("description"):
                 # Ensure we have all basic info
@@ -289,9 +314,9 @@ def process_linkedin_jobs(jobs: List[Dict], resume_path: str, max_jobs: Optional
                     if not api_job_info.get(field) and initial_job_info.get(field):
                         api_job_info[field] = initial_job_info.get(field)
                 
-                # Calculate match score
-                if resume_text:
-                    api_job_info['match_score'] = calculate_match_score(resume_text, api_job_info)
+                # If match score wasn't calculated in fetch_job_via_api, calculate it now
+                if resume_text and 'match_score' not in api_job_info:
+                    api_job_info['match_score'] = calculate_match_score(resume_text, api_job_info, matching_profile)
                     logging.info(f"Match score: {api_job_info['match_score']:.2f}")
                 
                 # Add to results
@@ -300,11 +325,11 @@ def process_linkedin_jobs(jobs: List[Dict], resume_path: str, max_jobs: Optional
             else:
                 # Fall back to standard method if API fails
                 logging.warning(f"LinkedIn guest API failed for job {i+1}, falling back to standard method")
-                job_result = analyze_job(job_url, initial_job_info, resume_path)
+                job_result = analyze_job(job_url, initial_job_info, resume_path, matching_profile)
                 results.append(job_result)
         else:
             # Use standard job analysis method
-            job_result = analyze_job(job_url, initial_job_info, resume_path)
+            job_result = analyze_job(job_url, initial_job_info, resume_path, matching_profile)
             results.append(job_result)
         
         # Small delay to avoid hitting rate limits
@@ -459,6 +484,17 @@ def main():
                       help="Export results to Markdown format")
     parser.add_argument("--verbose", "-v", action="store_true",
                       help="Enable verbose output")
+    # Advanced matching options
+    parser.add_argument("--tfidf-weight", type=float, default=0.6,
+                      help="Weight for TF-IDF text similarity (0.0 to 1.0, default: 0.6)")
+    parser.add_argument("--keyword-weight", type=float, default=0.3,
+                      help="Weight for keyword matching (0.0 to 1.0, default: 0.3)")
+    parser.add_argument("--title-weight", type=float, default=0.1,
+                      help="Weight for job title relevance (0.0 to 1.0, default: 0.1)")
+    parser.add_argument("--matching-mode", choices=["standard", "strict", "lenient"], default="standard",
+                      help="Matching mode: standard, strict (requires more matches), or lenient (requires fewer matches)")
+    parser.add_argument("--quiet", "-q", action="store_true",
+                      help="Suppress non-error output")
     parser.add_argument("--url", "-u", type=str,
                       help="Process a single LinkedIn job URL")
     parser.add_argument("--url-file", "-uf", type=str,
@@ -471,6 +507,22 @@ def main():
     # Configure logging level
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+    elif args.quiet:
+        logging.getLogger().setLevel(logging.ERROR)
+        
+    # Log matching configuration
+    logging.debug(f"Matching configuration: TF-IDF weight={args.tfidf_weight}, "
+                 f"Keyword weight={args.keyword_weight}, Title weight={args.title_weight}, "
+                 f"Mode={args.matching_mode}")
+    
+    # Create matching profile
+    from job_search.matcher import create_matching_profile
+    matching_profile = create_matching_profile(
+        tfidf_weight=args.tfidf_weight,
+        keyword_weight=args.keyword_weight,
+        title_weight=args.title_weight,
+        matching_mode=args.matching_mode
+    )
     
     # Process a single LinkedIn job URL if provided
     if args.url:
@@ -479,7 +531,7 @@ def main():
             return
             
         logging.info(f"Processing single LinkedIn job URL: {args.url}")
-        job_result = analyze_job(args.url, resume_path=args.resume)
+        job_result = analyze_job(args.url, resume_path=args.resume, matching_profile=matching_profile)
         
         # Save the result to a JSON file
         output_dir = os.path.dirname(args.output)
@@ -505,19 +557,28 @@ def main():
         
     # Process a LinkedIn search URL if provided
     if args.search_url:
-        if not "linkedin.com/jobs/search/" in args.search_url:
-            logging.error("Invalid LinkedIn search URL. Must contain 'linkedin.com/jobs/search/'")
+        # accept both `/jobs/search/…` and `/jobs/search?…`
+        if "linkedin.com/jobs/search" not in args.search_url:
+            logging.error("Invalid LinkedIn search URL. Must contain 'linkedin.com/jobs/search'")
             return
             
         logging.info(f"Processing LinkedIn search URL: {args.search_url}")
-        job_listings = extract_jobs_from_search_url(args.search_url, args.max_jobs)
+        
+        # Load resume for scoring jobs
+        resume_text = None
+        if os.path.exists(args.resume):
+            resume_text = load_text_file(args.resume)
+            logging.info(f"Loaded resume from {args.resume} for matching")
+        
+        # Extract jobs from search URL and calculate match scores
+        job_listings = extract_jobs_from_search_url(args.search_url, args.max_jobs, resume_text, matching_profile)
         
         if not job_listings:
             logging.error(f"No job listings found in search URL: {args.search_url}")
             return
             
         # Process the extracted job listings
-        job_results = process_linkedin_jobs(job_listings, args.resume, args.max_jobs, args.use_api, args.save_html)
+        job_results = process_linkedin_jobs(job_listings, args.resume, args.max_jobs, args.use_api, args.save_html, matching_profile)
         
         # Save the results
         save_and_export_results(job_results, args.output, args.export_md, args.search_url)
@@ -549,12 +610,15 @@ def main():
                 if url.startswith("https://www.linkedin.com/jobs/view/"):
                     # This is a job URL
                     logging.info(f"Processing job URL: {url}")
-                    job_result = analyze_job(url, resume_path=args.resume)
+                    job_result = analyze_job(url, resume_path=args.resume, matching_profile=matching_profile)
                     job_urls.append(job_result)
-                elif "linkedin.com/jobs/search/" in url:
+                elif "linkedin.com/jobs/search" in url:
                     # This is a search URL
                     logging.info(f"Processing search URL: {url}")
-                    job_listings = extract_jobs_from_search_url(url, args.max_jobs)
+                    # Load resume for matching
+                    resume_text = load_text_file(args.resume) if os.path.exists(args.resume) else None
+                    # Get job listings with match scores calculated
+                    job_listings = extract_jobs_from_search_url(url, args.max_jobs, resume_text, matching_profile)
                     if job_listings:
                         search_results.extend(job_listings)
                 else:
@@ -564,7 +628,7 @@ def main():
             job_results = []
             if search_results:
                 logging.info(f"Processing {len(search_results)} job listings from search URLs")
-                search_job_results = process_linkedin_jobs(search_results, args.resume, args.max_jobs, args.use_api, args.save_html)
+                search_job_results = process_linkedin_jobs(search_results, args.resume, args.max_jobs, args.use_api, args.save_html, matching_profile)
                 job_results.extend(search_job_results)
                 
             # Add direct job URLs
@@ -632,7 +696,7 @@ def main():
         logging.info("Will save raw HTML responses for debugging")
         
     # Process the LinkedIn jobs
-    job_results = process_linkedin_jobs(linkedin_jobs, args.resume, args.max_jobs, args.use_api, args.save_html)
+    job_results = process_linkedin_jobs(linkedin_jobs, args.resume, args.max_jobs, args.use_api, args.save_html, matching_profile)
     
     # Save the output to a JSON file
     output_dir = os.path.dirname(args.output)

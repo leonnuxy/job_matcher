@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# main.py
 """
 Main entry point for the job_matcher application with a centralized CLI system.
 
@@ -12,7 +13,7 @@ This script provides a unified command-line interface with subcommands for all j
 Examples:
     python main.py search --terms "Python Developer" --locations "Remote" "Canada" --recency 24
     python main.py match --resume "data/resume.txt" --min-score 0.6
-    python main.py linkedin --url "https://www.linkedin.com/jobs/view/123456789"
+    python main.py linkedin --url "https://www.linkedin.com/jobs/view/4219164109" --resume data/resume.txt --min-score 0.5 --output data/linkedin_test.json --debug
     python main.py api --port 8000
     python main.py web
 """
@@ -21,6 +22,7 @@ import sys
 import argparse
 import logging
 from dotenv import load_dotenv
+from typing import Optional
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -95,38 +97,157 @@ def cmd_match(args):
 
 def cmd_linkedin(args):
     """Process and analyze LinkedIn job postings."""
-    # Import necessary modules
-    import sys
+    from services.linkedin import build_search_url, extract_jobs_from_search_url
+    from process_linkedin_job import process_linkedin_jobs, save_and_export_results
+    from job_search.matcher import create_matching_profile
     
-    # Set up the path to find modules
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    
-    # Import process_linkedin_job functionality
-    # Since the main functionality is in process_linkedin_job.py, we'll import from there
-    sys.argv = [sys.argv[0]]
-    
-    # Add command line arguments
-    if args.url:
-        sys.argv.extend(["--url", args.url])
-    if args.search_url:
-        sys.argv.extend(["--search-url", args.search_url])
-    if args.resume:
-        sys.argv.extend(["--resume", args.resume])
-    if args.min_score is not None:
-        sys.argv.extend(["--min-score", str(args.min_score)])
-    if args.output_dir:
-        sys.argv.extend(["--output-dir", args.output_dir])
-    if args.save_html:
-        sys.argv.append("--save-html")
+    # Setup debug logging if requested
     if args.debug:
-        sys.argv.append("--debug")
+        logging.getLogger().setLevel(logging.DEBUG)
+    elif args.quiet:
+        logging.getLogger().setLevel(logging.ERROR)
+    
+    all_jobs = []  # For storing all processed job listings
+    urls = []  # For collecting URLs to process
+    
+    # Create matching profile from advanced options
+    matching_profile = create_matching_profile(
+        tfidf_weight=args.tfidf_weight,
+        keyword_weight=args.keyword_weight,
+        title_weight=args.title_weight,
+        matching_mode=args.matching_mode
+    )
+    
+    logging.info(f"Using matching profile: mode={matching_profile['mode']}, "
+                f"weights={matching_profile['weights']}, "
+                f"threshold_multiplier={matching_profile['threshold_multiplier']}")
+    
+    # 1) Determine which URLs to process
+    if args.url:
+        # Single direct job URL mode
+        urls = [args.url]
+    elif args.search_url:
+        # Single search URL mode
+        urls = [args.search_url]
+    elif args.terms_file:
+        # Terms file mode - parse search terms and build URLs
+        with open(args.terms_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                # Skip empty lines and comments
+                line = line.partition('#')[0].strip()
+                if not line:
+                    continue
+                
+                # Parse the line format: "keyword[, location[, recency]]"
+                parts = [p.strip() for p in line.split(',', 2)]
+                keyword = parts[0]
+                location: Optional[str] = None
+                recency_hours: Optional[int] = None
+                
+                # Handle different line formats
+                if len(parts) > 1 and parts[1]:  # Location is present
+                    location_part = parts[1]
+                    
+                    # Check if location has a trailing number (space-separated recency)
+                    location_parts = location_part.rsplit(' ', 1)
+                    if len(location_parts) == 2:
+                        potential_loc, potential_rec = location_parts
+                        try:
+                            # Try to parse the trailing part as a recency value
+                            potential_rec_int = int(potential_rec)
+                            if potential_rec_int > 0:
+                                location = potential_loc
+                                recency_hours = potential_rec_int
+                            else:
+                                location = location_part  # Keep as-is if not positive
+                        except ValueError:
+                            location = location_part  # Not a number, keep as-is
+                    else:
+                        location = location_part
+                
+                # Check for explicit recency as third parameter
+                if len(parts) > 2 and parts[2]:
+                    try:
+                        explicit_rec = int(parts[2])
+                        if explicit_rec > 0:
+                            # Explicit recency overrides any space-separated one
+                            recency_hours = explicit_rec
+                    except ValueError:
+                        logging.warning(f"Invalid recency value '{parts[2]}' for '{keyword}'. Must be a positive integer.")
+                
+                # Build the search URL with the parsed parameters
+                search_url = build_search_url(keyword, location, recency_hours)
+                urls.append(search_url)
+                logging.debug(f"Built search URL for '{keyword}': {search_url}")
+    else:
+        logging.error("No source specified. Please provide --url, --search-url, or --terms-file.")
+        return 1
+    
+    # 2) Process each URL
+    for url in urls:
+        logging.info(f"Processing URL: {url}")
         
-    try:
-        # Import and run the main function from process_linkedin_job.py
-        from process_linkedin_job import main
-        return main()
-    except Exception as e:
-        logging.error(f"Error in LinkedIn command: {e}")
+        if "linkedin.com/jobs/view/" in url:
+            # Direct job URL - process as a single job
+            from process_linkedin_job import analyze_job
+            job_result = analyze_job(
+                url, 
+                resume_path=args.resume,
+                matching_profile=matching_profile
+            )
+            if job_result:
+                all_jobs.append(job_result)
+        
+        elif "linkedin.com/jobs/search" in url:
+            # Search URL - extract job listings and process them
+            # Load resume for scoring jobs
+            resume_text = None
+            if os.path.exists(args.resume):
+                with open(args.resume, 'r', encoding='utf-8') as f:
+                    resume_text = f.read()
+                logging.info(f"Loaded resume from {args.resume} for matching")
+            
+            # Extract jobs with match scores already calculated
+            job_listings = extract_jobs_from_search_url(url, args.max_jobs, resume_text, matching_profile)
+            if job_listings:
+                logging.info(f"Extracted {len(job_listings)} job listings from search URL")
+                processed_jobs = process_linkedin_jobs(
+                    job_listings,
+                    resume_path=args.resume,
+                    max_jobs=args.max_jobs,
+                    use_api=args.use_api,
+                    save_html=args.save_html,
+                    matching_profile=matching_profile
+                )
+                all_jobs.extend(processed_jobs)
+            else:
+                logging.warning(f"No job listings found in search URL: {url}")
+        
+        else:
+            logging.warning(f"Unsupported URL format: {url}")
+    
+    # 3) Save all processed jobs
+    if all_jobs:
+        # Filter jobs by minimum score if specified
+        if args.min_score > 0:
+            original_count = len(all_jobs)
+            all_jobs = [job for job in all_jobs if job.get('match_score', 0) >= args.min_score]
+            logging.info(f"Filtered out {original_count - len(all_jobs)} jobs below minimum score of {args.min_score}")
+        
+        # Determine if we should export as markdown
+        export_md = getattr(args, "export_md", False)
+        
+        # Save results with all URLs as source info
+        source_info = ";".join(urls)
+        save_and_export_results(
+            all_jobs,
+            output_path=args.output,
+            export_md=export_md,
+            source_info=source_info
+        )
+        return 0
+    else:
+        logging.error("No job listings were processed successfully.")
         return 1
 
 def cmd_api(args):
@@ -205,11 +326,35 @@ def main():
     linkedin_parser = subparsers.add_parser("linkedin", help="Process and analyze LinkedIn job postings")
     linkedin_parser.add_argument("--url", help="LinkedIn job URL to process")
     linkedin_parser.add_argument("--search-url", help="LinkedIn search URL to process multiple jobs")
-    linkedin_parser.add_argument("--resume", default="data/resume.txt", help="Resume file path")
-    linkedin_parser.add_argument("--min-score", type=float, default=0.0, help="Minimum match score filter (0-1)")
-    linkedin_parser.add_argument("--output-dir", default="data/linkedin_jobs", help="Output directory")
-    linkedin_parser.add_argument("--save-html", action="store_true", help="Save raw HTML responses")
-    linkedin_parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    linkedin_parser.add_argument("--terms-file", "-f", default="data/search_terms.txt", 
+                               help="Path to file with search terms in format: 'keyword, location, recency'")
+    linkedin_parser.add_argument("--resume", default="data/resume.txt", 
+                               help="Resume file path")
+    linkedin_parser.add_argument("--min-score", type=float, default=0.0, 
+                               help="Minimum match score filter (0-1)")
+    linkedin_parser.add_argument("--output", "-o", default="data/linkedin_jobs_analysis.json", 
+                               help="Output file (default: data/linkedin_jobs_analysis.json)")
+    linkedin_parser.add_argument("--max-jobs", type=int, default=5, 
+                               help="Maximum number of jobs to process per search URL (default: 5)")
+    linkedin_parser.add_argument("--save-html", action="store_true", 
+                               help="Save raw HTML responses")
+    linkedin_parser.add_argument("--export-md", action="store_true", 
+                               help="Export results to Markdown format")
+    linkedin_parser.add_argument("--debug", action="store_true", 
+                               help="Enable debug logging")
+    linkedin_parser.add_argument("-a", "--use-api", action="store_true", 
+                               help="Fetch each job via the LinkedIn guest API instead of using fallback scraping")
+    # Advanced matching options
+    linkedin_parser.add_argument("--tfidf-weight", type=float, default=0.6,
+                               help="Weight for TF-IDF text similarity (0.0 to 1.0, default: 0.6)")
+    linkedin_parser.add_argument("--keyword-weight", type=float, default=0.3,
+                               help="Weight for keyword matching (0.0 to 1.0, default: 0.3)")
+    linkedin_parser.add_argument("--title-weight", type=float, default=0.1,
+                               help="Weight for job title relevance (0.0 to 1.0, default: 0.1)")
+    linkedin_parser.add_argument("--matching-mode", choices=["standard", "strict", "lenient"], default="standard",
+                               help="Matching mode: standard, strict (requires more matches), or lenient (requires fewer matches)")
+    linkedin_parser.add_argument("--quiet", "-q", action="store_true",
+                               help="Suppress non-error output")
     linkedin_parser.set_defaults(func=cmd_linkedin)
     
     # API command

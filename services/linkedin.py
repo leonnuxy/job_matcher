@@ -1,3 +1,5 @@
+# services/linkedin.py
+
 """
 LinkedIn Service Module
 
@@ -21,13 +23,47 @@ import time
 import os
 import logging
 from typing import Dict, Any, Optional, List
+from urllib.parse import quote_plus
 import requests
 from bs4 import BeautifulSoup
 
 # Import helpers from other modules
 from services.config import USER_AGENT, REQUEST_TIMEOUT
+
 from job_search.enhanced_parser import parse_job_details, text_or_none
 from services.utils import regex_search
+# Import the enhanced matching function
+from job_search.matcher import calculate_match_score
+
+
+def build_search_url(keywords: str, location: Optional[str] = None, recency_hours: Optional[int] = None) -> str:
+    """
+    Construct a LinkedIn job‐search URL from a keyword, optional location, and optional recency.
+    
+    Args:
+        keywords: Job keywords to search for
+        location: Optional location to search in
+        recency_hours: Optional recency filter in hours (e.g., 24, 48, etc.)
+        
+    Returns:
+        Properly formatted LinkedIn search URL with parameters
+    """
+    from urllib.parse import urlencode, quote
+    
+    base = "https://www.linkedin.com/jobs/search/"
+    params = []
+    
+    # LinkedIn prefers f_TPR parameter first in the query string
+    if recency_hours and recency_hours > 0:
+        params.append(("f_TPR", f"r{recency_hours*3600}"))
+        
+    params.append(("keywords", keywords))
+    
+    if location:
+        params.append(("location", location))
+        
+    qs = urlencode(params, quote_via=quote)
+    return f"{base}?{qs}"
 
 
 def extract_job_id_from_url(url: str) -> Optional[str]:
@@ -45,31 +81,29 @@ def extract_job_id_from_url(url: str) -> Optional[str]:
         
     # Direct search for IDs in various URL formats
     patterns = [
-        r'(?:currentJobId=|view/)(\d{10})',  # Match 10-digit ID in currentJobId param or after /view/
-        r'/view/external/(\d{10})',          # External link format
+        r'(?:currentJobId=|view/)(\d+)',  # Match any-length ID in currentJobId param or after /view/
+        r'/view/external/(\d+)',          # External link format
         r'linkedin\.com/jobs/view/(\d+)',    # Standard job URL
-        r'jobs/view/(?:.*?)(?:-)?(\d{10})(?:\?|$)',  # ID at the end of the path with possible text before
+        r'jobs/view/(?:.*?)(?:-)?(\d+)(?:\?|$)',  # ID at the end of the path with possible text before
     ]
     
     for pattern in patterns:
         match = re.search(pattern, url)
         if match:
-            # Return the numeric job ID if it's in the second group
-            if len(match.groups()) > 1:
-                return match.group(2)
-            # Otherwise return the first group
             return match.group(1)
     
     return None
 
 
-def fetch_job_via_api(job_url: str, save_html: bool = False) -> Dict:
+def fetch_job_via_api(job_url: str, save_html: bool = False, resume_text: Optional[str] = None, matching_profile=None) -> Dict:
     """
     Fetch job details from LinkedIn's guest API using the job ID.
     
     Args:
         job_url: URL of the LinkedIn job posting
         save_html: Whether to save the raw HTML response for debugging
+        resume_text: Optional resume text to calculate match scores against
+        matching_profile: Custom matching profile with weights and mode
         
     Returns:
         Dictionary with job details or empty dict if retrieval fails
@@ -105,7 +139,7 @@ def fetch_job_via_api(job_url: str, save_html: bool = False) -> Dict:
         # Check if we got a proper HTML response (not empty or redirected)
         if len(resp.text) < 1000:
             logging.warning(f"LinkedIn API response too short ({len(resp.text)} bytes), might be throttled")
-            return {}
+            # Do not return, just warn
             
         resp.raise_for_status()
         
@@ -136,6 +170,11 @@ def fetch_job_via_api(job_url: str, save_html: bool = False) -> Dict:
         # Use enhanced_parser to extract job details
         job_details = parse_job_details(soup)
         job_info.update(job_details)
+        # Fallback: if no description, try extract_job_description
+        if not job_info.get("description"):
+            desc = extract_job_description(soup)
+            if desc:
+                job_info["description"] = desc
         
         # Extract location using our dedicated function
         location = extract_location(soup)
@@ -186,6 +225,22 @@ def fetch_job_via_api(job_url: str, save_html: bool = False) -> Dict:
         # If we found a description, return the job info
         if job_info.get("description"):
             job_info["link"] = job_url
+            
+            # Calculate match score if resume text is provided
+            if resume_text:
+                job_info['keywords'] = []
+                if job_info.get('title') and job_info['title'] != "Unknown Title":
+                    # Extract meaningful keywords from title for better matching
+                    title_words = [w.lower() for w in job_info['title'].split() if len(w) > 3]
+                    job_info['keywords'] = title_words
+                
+                # Calculate match score using the enhanced matcher
+                try:
+                    job_info['match_score'] = calculate_match_score(resume_text, job_info, matching_profile)
+                except Exception as e:
+                    logging.error(f"Error calculating match score: {e}")
+                    job_info['match_score'] = 0
+            
             return job_info
             
         logging.warning("Could not find job description in LinkedIn guest API response")
@@ -203,6 +258,8 @@ def fetch_job_via_api(job_url: str, save_html: bool = False) -> Dict:
 def check_job_status(soup: BeautifulSoup) -> bool:
     """
     Check if the job posting is still active.
+    Only treat it as inactive if we find a definitive “no longer accepting” message.
+    Otherwise assume it's active.
     
     Args:
         soup: BeautifulSoup object from LinkedIn job page
@@ -219,30 +276,13 @@ def check_job_status(soup: BeautifulSoup) -> bool:
         "not available anymore"
     ]
     
-    # Check for inactive messages
+    # If any known “inactive” phrase appears, return False
     for pattern in inactive_patterns:
         if soup.find(string=re.compile(pattern, re.IGNORECASE)):
-            logging.info(f"Job is inactive: {pattern} message detected")
+            logging.info(f"LinkedIn job inactive: found pattern '{pattern}'")
             return False
-    
-    # Also check if there's an "apply" button - if not, job might be inactive
-    apply_selectors = [
-        ".apply-button", 
-        "[data-control-name='jobdetails_apply']",
-        ".jobs-apply-button",
-        ".jobs-s-apply"
-    ]
-    
-    apply_button = text_or_none(soup, apply_selectors)
-    if not apply_button:
-        # Double-check with text pattern since this is less reliable
-        if soup.find(string=re.compile("apply on company site", re.IGNORECASE)):
-            # There's still a way to apply, so job is likely active
-            return True
-        else:
-            logging.info("Job appears inactive: No apply button detected")
-            return False
-            
+
+    # Otherwise, we assume the job is active
     return True
 
 
@@ -368,13 +408,15 @@ def extract_job_description(soup: BeautifulSoup) -> Optional[str]:
     return description
 
 
-def extract_jobs_from_search_url(search_url: str, max_jobs: Optional[int] = None) -> List[Dict[str, Any]]:
+def extract_jobs_from_search_url(search_url: str, max_jobs: Optional[int] = None, resume_text: Optional[str] = None, matching_profile=None) -> List[Dict[str, Any]]:
     """
     Extract individual job listings from a LinkedIn search result URL.
     
     Args:
         search_url: LinkedIn search URL
         max_jobs: Maximum number of jobs to extract (None for all)
+        resume_text: Optional resume text to calculate match scores against
+        matching_profile: Custom matching profile with weights and mode
         
     Returns:
         List of job dictionaries with basic information
@@ -383,7 +425,7 @@ def extract_jobs_from_search_url(search_url: str, max_jobs: Optional[int] = None
         logging.info(f"Extracting job listings from search URL: {search_url}")
         
         # Create a session to maintain headers
-        session = requests.Session()
+        session = get_session()
         session.headers.update({
             "User-Agent": USER_AGENT,
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
@@ -416,14 +458,24 @@ def extract_jobs_from_search_url(search_url: str, max_jobs: Optional[int] = None
                         job_url = f"https://www.linkedin.com{job_url}"
                     
                     # Create a minimal job info dictionary
-                    job_listings.append({
+                    job_info = {
                         'url': job_url,
                         'id': extract_job_id_from_url(job_url),
                         'title': link.get_text(strip=True) or "Unknown Title",
                         'company': "Unknown Company",
                         'location': "Unknown Location",
+                        'link': job_url,  # Added for compatibility with matcher
                         'match_score': 0
-                    })
+                    }
+                    
+                    # Calculate match score if resume text is provided
+                    if resume_text and job_info.get('title') != 'Unknown Title':
+                        try:
+                            job_info['match_score'] = calculate_match_score(resume_text, job_info, matching_profile)
+                        except Exception as e:
+                            logging.error(f"Error calculating match score: {e}")
+                    
+                    job_listings.append(job_info)
         else:
             # Process each job card
             for card in job_cards:
@@ -451,15 +503,34 @@ def extract_jobs_from_search_url(search_url: str, max_jobs: Optional[int] = None
                 company = text_or_none(card, company_selectors) or "Unknown Company"
                 location = text_or_none(card, location_selectors) or "Unknown Location"
                 
-                # Add to job listings
-                job_listings.append({
+                # Create job dictionary with basic info
+                job_info = {
                     'url': job_url,
                     'id': extract_job_id_from_url(job_url),
                     'title': title,
                     'company': company,
                     'location': location,
+                    'link': job_url,  # Added for compatibility with matcher
                     'match_score': 0
-                })
+                }
+                
+                # Calculate match score if resume text is provided
+                if resume_text and job_info.get('title') != 'Unknown Title':
+                    # Extract keywords from title for better matching
+                    job_info['keywords'] = []
+                    if title != "Unknown Title":
+                        # Extract meaningful keywords from title
+                        title_words = [w.lower() for w in title.split() if len(w) > 3]
+                        job_info['keywords'] = title_words
+                    
+                    # Calculate match score using the enhanced matcher
+                    try:
+                        job_info['match_score'] = calculate_match_score(resume_text, job_info, matching_profile)
+                    except Exception as e:
+                        logging.error(f"Error calculating match score: {e}")
+                
+                # Add to job listings
+                job_listings.append(job_info)
         
         # Limit the number of jobs if specified
         if max_jobs is not None and max_jobs > 0:
