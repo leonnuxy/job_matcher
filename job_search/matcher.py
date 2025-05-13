@@ -12,8 +12,14 @@ from datetime import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# at top‐level so we only fit once:
-_TFIDF = TfidfVectorizer(stop_words="english", max_df=0.8)
+# Configure vectorizer with optimized parameters
+_TFIDF = TfidfVectorizer(
+    stop_words="english", 
+    max_df=1.0,  # Allow terms that appear in all documents
+    min_df=1,    # Keep terms that appear at least once
+    ngram_range=(1, 2),  # Use both unigrams and bigrams
+    max_features=5000  # Limit features to prevent overfitting
+)
 
 # Add parent directory to sys.path if running as a module
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -109,7 +115,7 @@ def load_latest_job_results() -> List[Dict]:
         return []
 
 
-def find_matching_jobs(resume: str, jobs: List[Dict], match_threshold: float = 0.5) -> pd.DataFrame:
+def find_matching_jobs(resume: str, jobs: List[Dict], match_threshold: float = 0.4) -> pd.DataFrame:
     """
     Find jobs that match the resume above a certain threshold.
     
@@ -152,37 +158,29 @@ def find_matching_jobs(resume: str, jobs: List[Dict], match_threshold: float = 0
     return df.sort_values("score", ascending=False)
 
 
-def create_matching_profile(tfidf_weight=0.6, keyword_weight=0.3, title_weight=0.1, matching_mode="standard"):
+def create_matching_profile(matching_mode="standard"):
     """
-    Create a matching profile with custom weights and modes.
+    Create a simplified matching profile with predefined settings based on mode.
     
     Args:
-        tfidf_weight: Weight for TF-IDF text similarity (0.0 to 1.0)
-        keyword_weight: Weight for keyword matching (0.0 to 1.0)
-        title_weight: Weight for job title relevance (0.0 to 1.0)
         matching_mode: Matching mode (standard, strict, lenient)
         
     Returns:
         Dictionary with matching profile configuration
     """
-    # Normalize weights to ensure they sum to 1.0
-    total = tfidf_weight + keyword_weight + title_weight
-    normalized_weights = {
-        "tfidf": tfidf_weight / total if total > 0 else 0.6,
-        "keyword": keyword_weight / total if total > 0 else 0.3,
-        "title": title_weight / total if total > 0 else 0.1
-    }
-    
     # Determine threshold multipliers based on matching mode
     if matching_mode == "strict":
-        threshold_multiplier = 1.2  # Higher threshold for strict mode
+        threshold_multiplier = 1.0  # Higher threshold for strict mode
     elif matching_mode == "lenient":
-        threshold_multiplier = 0.8  # Lower threshold for lenient mode
+        threshold_multiplier = 1.5  # Boost scores by 50% for lenient mode
+    elif matching_mode == "very_lenient":
+        threshold_multiplier = 2.2  # Ultra lenient - more than double the scores
     else:  # standard
-        threshold_multiplier = 1.0
-        
+        threshold_multiplier = 1.1  # Make standard mode 10% more lenient by default
+    
+    # Note: We've simplified by removing custom weights
+    # The calculation function now uses fixed weights
     return {
-        "weights": normalized_weights,
         "threshold_multiplier": threshold_multiplier,
         "mode": matching_mode
     }
@@ -190,15 +188,15 @@ def create_matching_profile(tfidf_weight=0.6, keyword_weight=0.3, title_weight=0
 
 def calculate_match_score(resume: str, job: Union[Dict, str], matching_profile=None) -> float:
     """
-    Calculate a match score between a resume and a job using multiple techniques:
-    1. TF-IDF and cosine similarity on the full text
-    2. Keyword matching for technical skills
-    3. Job title relevance analysis
+    Calculate a match score between a resume and a job using a simplified approach:
+    1. TF-IDF and cosine similarity for semantic matching
+    2. Direct keyword matching for technical skills
+    3. Job title relevance for role fit
     
     Args:
-        resume: Resume text (already normalized)
+        resume: Resume text
         job: Job dictionary with 'description' field or job description string
-        matching_profile: Custom matching profile (optional)
+        matching_profile: Optional matching profile (simplified - mainly affects thresholds)
         
     Returns:
         Match score between 0 and 1
@@ -214,46 +212,109 @@ def calculate_match_score(resume: str, job: Union[Dict, str], matching_profile=N
             job_keywords = []
             job_title = ""
         
-        desc = normalize(desc)
+        if not desc:
+            logging.warning("Empty job description, cannot calculate match score")
+            return 0.0
+            
+        # Normalize texts
+        resume_norm = normalize(resume)
+        desc_norm = normalize(desc)
         
-        # Get matching profile weights
-        if matching_profile is None:
-            matching_profile = create_matching_profile()
-        weights = matching_profile["weights"]
+        logging.debug(f"[calculate_match_score] raw desc length={len(desc)}")
         
-        # 1. Base score from TF-IDF and cosine similarity
-        docs = [resume, desc]
+        # 1. Create a fresh vectorizer for each document pair 
+        # (this ensures we're not influenced by previous calculations)
+        docs = [resume_norm, desc_norm]
         X = _TFIDF.fit_transform(docs)  # fit on both documents
         tfidf_score = float(cosine_similarity(X[0:1], X[1:2])[0,0])
         
-        # 2. Additional score from keyword matching
+        # Boost the TF-IDF score more aggressively (they tend to be very small naturally)
+        # Increasing from 2.5x to 2.75x for more lenient matching
+        tfidf_score = min(tfidf_score * 3.0, 1.0)  # Increase TF-IDF boost multiplier
+        
+        # Add a minimum floor to ensure we don't get too many zeros
+        # This ensures even slight matches get some score
+        if tfidf_score > 0:
+            tfidf_score = max(tfidf_score, 0.18)  # Increased minimum floor from 0.15 to 0.18
+        
+        # 2. Enhanced keyword matching with higher leniency
         keyword_score = 0.0
         if job_keywords:
             resume_lower = resume.lower()
-            matched_keywords = sum(1 for kw in job_keywords if kw.lower() in resume_lower)
-            if job_keywords:  # Avoid division by zero
-                keyword_score = matched_keywords / len(job_keywords)
+            matched_count = 0
+            partial_matches = 0
+            
+            for kw in job_keywords:
+                kw_lower = kw.lower()
+                # Check for exact matches or common variations (plural/singular)
+                if (kw_lower in resume_lower or 
+                    (kw_lower.endswith('s') and kw_lower[:-1] in resume_lower) or 
+                    (kw_lower + 's' in resume_lower)):
+                    matched_count += 1
+                else:
+                    # More lenient approach: Check for word parts
+                    # If keyword is at least 4 chars and a substantial part is in resume
+                    if len(kw_lower) >= 4:
+                        # Try to find the first 3+ characters of the keyword in the resume (reduced from 4)
+                        if kw_lower[:3] in resume_lower or kw_lower[-3:] in resume_lower:
+                            partial_matches += 0.7  # Further increase partial match weight
+            
+            # Add the partial matches to the count            
+            matched_count += partial_matches
+                    
+            keyword_score = matched_count / max(1, len(job_keywords))
+            
+            # Even more lenient bonus structure
+            # Give a bonus for high keyword matches (reduced threshold to 2+ from 3+)
+            if matched_count >= 2:
+                keyword_score = min(keyword_score * 1.6, 1.0)  # 60% bonus for high keyword matches
         
-        # 3. Title relevance score (look for title keywords in resume)
-        title_score = 0.0
+        # 3. Improved job title matching with higher leniency
+        title_score = 0.2  # Increase base score for title relevance
         if job_title:
-            # Extract meaningful words from title (skip common words)
-            title_words = [w for w in normalize(job_title).split() if len(w) > 3]
+            # Include more meaningful title words (length > 2)
+            title_words = [w for w in normalize(job_title).split() if len(w) > 2]
             if title_words:
-                title_matches = sum(1 for word in title_words if word in resume.lower())
-                title_score = title_matches / len(title_words)
+                resume_words = set(resume_norm.split())
+                matches = 0
+                
+                for word in title_words:
+                    if word in resume_words:
+                        matches += 1.3  # Increased from 1.2 to 1.3 for more weight
+                    else:
+                        # More lenient partial matching
+                        for resume_word in resume_words:
+                            # Check for partial matches with even shorter minimum length (reduced to 2 characters)
+                            if (word in resume_word and len(word) > 2) or (resume_word in word and len(resume_word) > 2):
+                                matches += 0.8  # Increased from 0.7 to 0.8 for more weight
+                                break
+                
+                # Calculate score but ensure it doesn't go below the base score
+                calculated_score = matches / len(title_words)
+                title_score = max(title_score, calculated_score)
+                
+                # Give stronger bonuses for important role matches
+                # Added more job roles to the list of keywords
+                role_keywords = ['developer', 'engineer', 'analyst', 'scientist', 'manager', 'designer', 
+                                'programmer', 'consultant', 'specialist', 'administrator', 'architect', 'lead']
+                for role in role_keywords:
+                    if role in job_title.lower() and role in resume.lower():
+                        title_score = min(title_score + 0.35, 1.0)  # Increased from 0.3 to 0.35
+                        break
         
-        # Weighted combination of scores using profile weights
-        final_score = (
-            weights["tfidf"] * tfidf_score +
-            weights["keyword"] * keyword_score +
-            weights["title"] * title_score
-        )
+        # Calculate final score with slightly adjusted weights to emphasize keywords more
+        # 55% TF-IDF (down from 60%), 35% keywords (up from 30%), 10% title (unchanged)
+        # This gives more weight to specific skill matches which tend to be more reliable
+        final_score = (0.55 * tfidf_score) + (0.35 * keyword_score) + (0.1 * title_score)
         
-        # Apply threshold multiplier if applicable
-        if "threshold_multiplier" in matching_profile:
-            # This doesn't modify the score but helps interpret it relative to thresholds
-            final_score = min(final_score, 1.0)  # Ensure score is at most 1.0
+        # Apply a threshold multiplier if provided (for compatibility with existing code)
+        if matching_profile and "threshold_multiplier" in matching_profile:
+            mult = matching_profile["threshold_multiplier"]
+            # Simple boost for lenient mode, reduction for strict mode
+            final_score = min(final_score * mult, 1.0)
+        
+        # Ensure we never exceed 1.0
+        final_score = min(final_score, 1.0)
         
         return round(final_score, 3)
     except Exception as e:
@@ -390,13 +451,13 @@ def load_job_results(results_dir: str) -> List[Dict]:
 
 def preprocess_job_data(jobs: List[Dict]) -> List[Dict]:
     """
-    Preprocesses job data to standardize format and extract better titles.
+    Preprocesses job data to standardize format and extract better titles and companies.
     
     Args:
         jobs: List of job dictionaries
         
     Returns:
-        Processed list of job dictionaries
+        Processed list of job dictionaries with enhanced title and company information
     """
     for job in jobs:
         # If job has no title or has "Unknown Title", try to extract from link
@@ -407,10 +468,36 @@ def preprocess_job_data(jobs: List[Dict]) -> List[Dict]:
                 
                 # Extract position title from LinkedIn URLs
                 if 'linkedin.com/jobs/view/' in link:
-                    parts = link.split('linkedin.com/jobs/view/')[1].split('-at-')
-                    if len(parts) >= 1:
-                        title = parts[0].replace('-', ' ').title()
-                        job['title'] = title
+                    # Handle different URL formats
+                    if '-at-' in link:
+                        # Format: job-title-at-company-jobid
+                        parts = link.split('linkedin.com/jobs/view/')[1].split('-at-')
+                        if len(parts) >= 1:
+                            # Clean up the title part
+                            title_part = parts[0]
+                            # Remove trailing job ID if present (common in some LinkedIn URLs)
+                            if title_part and title_part[-1].isdigit():
+                                title_part = '-'.join(title_part.split('-')[:-1])
+                            
+                            title = title_part.replace('-', ' ').strip()
+                            # Capitalize first letter of each word for proper title case
+                            job['title'] = ' '.join(word.capitalize() for word in title.split())
+                            
+                            # Extract company from URL if missing
+                            if (not job.get('company') or job.get('company') == 'Unknown Company') and len(parts) > 1:
+                                # Get company part and remove any URL parameters
+                                company_part = parts[1].split('?')[0]
+                                company = company_part.replace('-', ' ').title()
+                                job['company'] = company.strip()
+                    else:
+                        # Format: jobid without title in URL
+                        # Extract the job ID and use it as a placeholder title
+                        try:
+                            job_id = link.split('linkedin.com/jobs/view/')[1].split('?')[0]
+                            if job_id.isdigit():
+                                job['title'] = "LinkedIn Job #" + job_id
+                        except:
+                            pass
         
         # Add keyword list for better matching if not already present
         if 'keywords' not in job and 'description' in job:
@@ -423,7 +510,7 @@ def preprocess_job_data(jobs: List[Dict]) -> List[Dict]:
 
 def extract_keywords(text: str) -> List[str]:
     """
-    Extract relevant technical keywords from text.
+    Extract relevant technical keywords from text using a more comprehensive approach.
     
     Args:
         text: Text to extract keywords from
@@ -431,25 +518,78 @@ def extract_keywords(text: str) -> List[str]:
     Returns:
         List of extracted keywords
     """
-    # Common programming languages, frameworks, and technologies
-    tech_keywords = [
-        'python', 'javascript', 'java', 'c#', 'c++', 'ruby', 'php', 'typescript', 
-        'go', 'rust', 'kotlin', 'swift', 'scala', 'r', 'bash', 'shell',
-        'react', 'angular', 'vue', 'node', 'django', 'flask', 'spring', 'express',
-        'kubernetes', 'docker', 'aws', 'azure', 'gcp', 'terraform', 'ansible',
-        'ml', 'ai', 'machine learning', 'deep learning', 'data science',
-        'devops', 'ci/cd', 'jenkins', 'github actions', 'gitlab ci', 'circleci',
-        'sql', 'nosql', 'mongodb', 'postgresql', 'mysql', 'redis', 'elasticsearch',
-        'full stack', 'frontend', 'backend', 'data engineer', 'cloud', 'agile', 'scrum'
-    ]
+    # Comprehensive list of technical keywords by category
+    tech_keywords = {
+        # Programming languages
+        'languages': [
+            'python', 'javascript', 'typescript', 'java', 'c#', 'c++', 'ruby', 'php', 
+            'go', 'rust', 'kotlin', 'swift', 'scala', 'r', 'bash', 'shell', 'perl',
+            'objective-c', 'groovy', 'powershell', 'lua', 'dart', 'haskell', 'clojure'
+        ],
+        # Web frameworks
+        'web_frameworks': [
+            'react', 'angular', 'vue', 'svelte', 'next.js', 'nuxt', 'express', 
+            'django', 'flask', 'spring', 'spring boot', 'rails', 'laravel', 'asp.net',
+            'fastapi', 'quarkus', 'meteor', 'gatsby'
+        ],
+        # Cloud platforms
+        'cloud': [
+            'aws', 'azure', 'gcp', 'google cloud', 'ibm cloud', 'oracle cloud',
+            'digitalocean', 'heroku', 'netlify', 'vercel', 'cloudflare', 'linode'
+        ],
+        # DevOps & Infrastructure
+        'devops': [
+            'kubernetes', 'k8s', 'docker', 'terraform', 'ansible', 'jenkins', 
+            'github actions', 'gitlab ci', 'circleci', 'travis', 'pulumi', 'chef', 
+            'puppet', 'prometheus', 'grafana', 'elk', 'nginx', 'apache'
+        ],
+        # Databases
+        'databases': [
+            'sql', 'nosql', 'mongodb', 'postgresql', 'mysql', 'sqlite', 'redis',
+            'elasticsearch', 'dynamodb', 'cassandra', 'couchdb', 'firestore',
+            'mariadb', 'oracle', 'sqlserver', 'neo4j', 'graphql'
+        ],
+        # AI/ML
+        'ai_ml': [
+            'machine learning', 'ml', 'deep learning', 'ai', 'artificial intelligence',
+            'nlp', 'natural language processing', 'tensorflow', 'pytorch', 'keras',
+            'scikit-learn', 'opencv', 'computer vision', 'llm', 'large language model'
+        ],
+        # Roles & methodologies
+        'roles': [
+            'full stack', 'frontend', 'backend', 'devops', 'data engineer', 'data scientist',
+            'sre', 'site reliability', 'qa', 'quality assurance', 'product manager',
+            'scrum master', 'agile', 'scrum', 'kanban', 'waterfall', 'ci/cd', 
+            'continuous integration', 'continuous delivery'
+        ]
+    }
+    
+    # Prepare text
+    text_lower = text.lower()
+    text_words = set(re.findall(r'\b\w+\b', text_lower))  # Get all whole words
     
     # Find all matching keywords in the text
     found_keywords = []
-    text_lower = text.lower()
     
-    for keyword in tech_keywords:
-        if keyword in text_lower:
-            found_keywords.append(keyword)
+    # Check for exact keyword matches
+    for category, keywords in tech_keywords.items():
+        for keyword in keywords:
+            # Use word boundary check for more precise matching
+            # This avoids "react" matching "reactive" but allows multi-word terms
+            if ' ' in keyword:  # Multi-word term
+                if keyword in text_lower:
+                    found_keywords.append(keyword)
+            else:  # Single word - use word boundary check
+                pattern = r'\b' + re.escape(keyword) + r'\b'
+                if re.search(pattern, text_lower):
+                    found_keywords.append(keyword)
+    
+    # Find capitalized words which might be technologies not in our list
+    # (e.g., product names, company-specific tools)
+    capitalized_pattern = r'\b[A-Z][a-z]*[A-Z][a-zA-Z]*\b'  # CamelCase or PascalCase words
+    for match in re.findall(capitalized_pattern, text):
+        if len(match) > 2 and match.lower() not in found_keywords:
+            found_keywords.append(match)
     
     return found_keywords
 

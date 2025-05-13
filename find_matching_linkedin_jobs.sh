@@ -4,13 +4,38 @@
 # This script will run the LinkedIn job parser with progressively lower thresholds
 # until it finds some matching jobs.
 
+# Get the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Display help information
+show_help() {
+  echo "Usage: $(basename "$0") [OPTIONS]"
+  echo
+  echo "Find matching LinkedIn jobs using the enhanced matcher."
+  echo "This script will try progressively lower thresholds until matches are found."
+  echo
+  echo "Options:"
+  echo "  --resume, -r PATH       Resume file path (default: ${SCRIPT_DIR}/data/resume.txt)"
+  echo "  --input, -i PATH        LinkedIn jobs input JSON file (default: ${SCRIPT_DIR}/data/linkedin_search_results.json)"
+  echo "  --output, -o DIR        Output directory for results (default: ${SCRIPT_DIR}/data/job_matches)"
+  echo "  --mode MODE             Matching mode: standard, strict, or lenient (default: standard)"
+  echo "  --debug                 Enable debug mode with more verbose output"
+  echo "  --help, -h              Display this help and exit"
+  echo
+  exit 0
+}
+
 echo "Starting LinkedIn job matching with enhanced matcher..."
 
 # Parse command-line arguments
+ENABLE_DEBUG=false
 while [[ $# -gt 0 ]]; do
   key="$1"
 
   case $key in
+    --help|-h)
+      show_help
+      ;;
     --resume|-r)
       RESUME="$2"
       shift 2
@@ -27,34 +52,27 @@ while [[ $# -gt 0 ]]; do
       MATCHING_MODE="$2"
       shift 2
       ;;
-    --tfidf-weight)
-      TFIDF_WEIGHT="$2"
-      shift 2
+    --debug)
+      ENABLE_DEBUG=true
+      shift
       ;;
-    --keyword-weight)
-      KEYWORD_WEIGHT="$2"
-      shift 2
-      ;;
-    --title-weight)
-      TITLE_WEIGHT="$2"
+    --tfidf-weight|--keyword-weight|--title-weight)
+      echo "Notice: Weight parameters are no longer used. Using matching mode '$MATCHING_MODE' instead."
       shift 2
       ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [--resume|-r RESUME_PATH] [--input|-i JOBS_JSON] [--output|-o OUTPUT_DIR] [--mode MATCHING_MODE] [--tfidf-weight WEIGHT] [--keyword-weight WEIGHT] [--title-weight WEIGHT]"
+      echo "Usage: $0 [--resume|-r RESUME_PATH] [--input|-i JOBS_JSON] [--output|-o OUTPUT_DIR] [--mode MATCHING_MODE] [--debug]"
       exit 1
       ;;
   esac
 done
 
 # Set default values if not provided
-RESUME=${RESUME:-"data/resume.txt"}
-JOBS=${JOBS:-"data/linkedin_search_results.json"}
-OUTPUT_DIR=${OUTPUT_DIR:-"data/job_matches"}
+RESUME=${RESUME:-"${SCRIPT_DIR}/data/resume.txt"}
+JOBS=${JOBS:-"${SCRIPT_DIR}/data/linkedin_search_results.json"}
+OUTPUT_DIR=${OUTPUT_DIR:-"${SCRIPT_DIR}/data/job_matches"}
 MATCHING_MODE=${MATCHING_MODE:-"standard"}
-TFIDF_WEIGHT=${TFIDF_WEIGHT:-0.6}
-KEYWORD_WEIGHT=${KEYWORD_WEIGHT:-0.3}
-TITLE_WEIGHT=${TITLE_WEIGHT:-0.1}
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -63,50 +81,75 @@ echo "  Resume: $RESUME"
 echo "  Jobs input: $JOBS"
 echo "  Output directory: $OUTPUT_DIR"
 echo "  Matching mode: $MATCHING_MODE"
-echo "  TF-IDF weight: $TFIDF_WEIGHT"
-echo "  Keyword weight: $KEYWORD_WEIGHT"
-echo "  Title weight: $TITLE_WEIGHT"
+echo "  Debug mode: $ENABLE_DEBUG"
 
-# Thresholds to try (in descending order)
-THRESHOLDS=(0.7 0.6 0.5 0.4 0.3 0.2 0.1 0.05 0.01)
+# Check if required files exist
+if [ ! -f "$RESUME" ]; then
+    echo "ERROR: Resume file not found: $RESUME"
+    echo "Please check the path and try again."
+    exit 1
+fi
 
-# Function to check if we found matches
-check_matches() {
-    local matches=$(cat "$1" | grep -E '"high_matches"|"medium_matches"|"low_matches"' | grep -v ": 0" | wc -l)
-    if [ $matches -gt 0 ]; then
-        return 0  # Found matches
-    else
-        return 1  # No matches
+if [ ! -f "$JOBS" ]; then
+    echo "ERROR: Jobs input file not found: $JOBS"
+    echo "Please check the path and try again."
+    exit 1
+fi
+
+# Run the Python script with different thresholds
+echo "Processing LinkedIn jobs with enhanced matcher..."
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Debug mode flag
+DEBUG_FLAG=""
+if [ "$ENABLE_DEBUG" = true ]; then
+    DEBUG_FLAG="--debug"
+fi
+
+# Try with different thresholds if no results initially
+for THRESHOLD in 0.7 0.6 0.5 0.4 0.3 0.2 0.1 0.05 0.01; do
+    echo "Running with threshold: $THRESHOLD"
+    OUTPUT_FILE="${OUTPUT_DIR}/linkedin_job_matches_${TIMESTAMP}_${THRESHOLD}.json"
+    
+    # Run the Python script using the correct main.py linkedin command
+    if [ "$ENABLE_DEBUG" = true ]; then
+        echo "DEBUG: Running command: python3 ${SCRIPT_DIR}/main.py linkedin --input \"$JOBS\" --output \"$OUTPUT_FILE\" --resume \"$RESUME\" --use-api --min-score $THRESHOLD --matching-mode $MATCHING_MODE $DEBUG_FLAG --export-md"
     fi
-}
-
-# Try each threshold until we find matches
-for threshold in "${THRESHOLDS[@]}"; do
-    echo "Trying threshold: $threshold"
     
-    # Format the output file name with timestamp and threshold
-    OUTPUT="${OUTPUT_DIR}/linkedin_matches_${threshold}_$(date +%Y%m%d_%H%M%S).json"
+    python3 "${SCRIPT_DIR}/main.py" linkedin --input "$JOBS" --output "$OUTPUT_FILE" --resume "$RESUME" \
+            --use-api --min-score $THRESHOLD --matching-mode $MATCHING_MODE \
+            $DEBUG_FLAG --export-md
     
-    # Run the job matcher with the current threshold and custom matching configuration
-    python process_linkedin_job.py linkedin --input "$JOBS" --output "$OUTPUT" --resume "$RESUME" --min-score "$threshold" --export-md \
-      --matching-mode "$MATCHING_MODE" --tfidf-weight "$TFIDF_WEIGHT" --keyword-weight "$KEYWORD_WEIGHT" --title-weight "$TITLE_WEIGHT"
-    
-    # Check if we found matches
-    if check_matches "$OUTPUT"; then
-        echo "Found matches with threshold: $threshold"
-        echo "Results saved to: $OUTPUT"
+    # Check if we got any matches
+    MATCH_COUNT=$(grep -c "\"match_score\":" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+    NON_ZERO_COUNT=$(grep -c "\"match_score\": [^0]" "$OUTPUT_FILE" 2>/dev/null || echo "0")
+    if [[ $MATCH_COUNT -gt 0 ]] || [[ "$THRESHOLD" = "0.01" ]]; then
+        echo "Found $NON_ZERO_COUNT jobs with non-zero match scores at threshold $THRESHOLD"
         
-        # Also show the markdown file path
-        MD_FILE="${OUTPUT%.json}.md"
-        if [ -f "$MD_FILE" ]; then
-            echo "Markdown report: $MD_FILE"
+        # Create symlink to the latest result
+        ln -sf "$(basename "$OUTPUT_FILE")" "${OUTPUT_DIR}/latest_linkedin_matches.json"
+        ln -sf "$(basename "${OUTPUT_FILE%.json}.md")" "${OUTPUT_DIR}/latest_linkedin_matches.md"
+        
+        echo "Results saved to: $OUTPUT_FILE"
+        echo "Markdown report: ${OUTPUT_FILE%.json}.md"
+        
+        # If we're at the lowest threshold and still have zero matches, we need to check why
+        if [[ $MATCH_COUNT -eq 0 ]] && [[ "$THRESHOLD" = "0.01" ]]; then
+            echo "WARNING: No jobs with non-zero match scores found even at lowest threshold."
+            echo "This could indicate a problem with the matching algorithm or data."
+            echo "Check the resume and job data to ensure they're in the expected format."
+            
+            if [ "$ENABLE_DEBUG" = true ]; then
+                echo "DEBUG: Examining the first few job entries to diagnose issues..."
+                python3 -c "import json; f=open('$OUTPUT_FILE'); d=json.load(f); print(json.dumps(d['jobs'][0:2], indent=2)) if 'jobs' in d and len(d['jobs'])>0 else print('No jobs found')"
+            fi
         fi
         
-        exit 0
-    else
-        echo "No matches found with threshold: $threshold. Trying lower threshold..."
+        # Exit if we found matches or we're at the lowest threshold
+        break
     fi
+    
+    echo "No matches found at threshold $THRESHOLD, trying lower threshold..."
 done
 
-echo "No matches found with any threshold. Please check your resume and job descriptions."
-exit 1
+echo "Job matching complete!"

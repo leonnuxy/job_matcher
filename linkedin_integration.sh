@@ -3,10 +3,13 @@
 # LinkedIn Integration Script with Interactive Menu
 # This script provides an interactive interface for LinkedIn job matching features
 
-# Default settings
-RESUME="data/resume.txt"
-JOBS="data/linkedin_search_results.json"
-OUTPUT_DIR="data/job_matches"
+# Get the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Default settings with absolute paths
+RESUME="${SCRIPT_DIR}/data/resume.txt"
+JOBS="${SCRIPT_DIR}/data/linkedin_search_results.json"
+OUTPUT_DIR="${SCRIPT_DIR}/data/job_matches"
 MIN_SCORE=0.4
 EXPORT_MD=true
 
@@ -49,8 +52,28 @@ show_settings() {
 
 # Function to run the job matcher with current settings
 run_job_matcher() {
+    show_header
+    echo -e "${YELLOW}Running Job Matcher with Current Settings${NC}"
+    echo
+    
+    # Check if required files exist
+    if [ ! -f "$RESUME" ]; then
+        echo -e "${RED}Resume file not found: $RESUME${NC}"
+        echo -e "${YELLOW}Please update the resume path in settings.${NC}"
+        read -p "Press Enter to continue..."
+        return 1
+    fi
+    
+    if [ ! -f "$JOBS" ]; then
+        echo -e "${RED}Jobs input file not found: $JOBS${NC}"
+        echo -e "${YELLOW}Please update the jobs input path in settings or process a LinkedIn search URL first.${NC}"
+        read -p "Press Enter to continue..."
+        return 1
+    fi
+    
+    mkdir -p "$OUTPUT_DIR"
     local output="${OUTPUT_DIR}/linkedin_matches_$(date +%Y%m%d_%H%M%S).json"
-    local cmd="python process_linkedin_job.py linkedin --input \"$JOBS\" --output \"$output\" --resume \"$RESUME\""
+    local cmd="python \"${SCRIPT_DIR}/main.py\" linkedin --input \"$JOBS\" --output \"$output\" --resume \"$RESUME\""
     cmd+=" --min-score \"$MIN_SCORE\" --matching-mode \"$MATCHING_MODE\""
     cmd+=" --tfidf-weight \"$TFIDF_WEIGHT\" --keyword-weight \"$KEYWORD_WEIGHT\" --title-weight \"$TITLE_WEIGHT\""
     
@@ -98,8 +121,17 @@ process_search_url() {
         return
     fi
     
+    # Check if resume file exists
+    if [ ! -f "$RESUME" ]; then
+        echo -e "${RED}Resume file not found: $RESUME${NC}"
+        echo -e "${YELLOW}Please update the resume path in settings.${NC}"
+        read -p "Press Enter to continue..."
+        return 1
+    fi
+    
+    mkdir -p "$OUTPUT_DIR"
     local output="${OUTPUT_DIR}/linkedin_search_$(date +%Y%m%d_%H%M%S).json"
-    local cmd="python process_linkedin_job.py linkedin --search-url \"$search_url\" --output \"$output\" --resume \"$RESUME\""
+    local cmd="python \"${SCRIPT_DIR}/main.py\" linkedin --search-url \"$search_url\" --output \"$output\" --resume \"$RESUME\""
     cmd+=" --min-score \"$MIN_SCORE\" --matching-mode \"$MATCHING_MODE\""
     cmd+=" --tfidf-weight \"$TFIDF_WEIGHT\" --keyword-weight \"$KEYWORD_WEIGHT\" --title-weight \"$TITLE_WEIGHT\""
     
@@ -147,8 +179,17 @@ process_job_url() {
         return
     fi
     
+    # Check if resume file exists
+    if [ ! -f "$RESUME" ]; then
+        echo -e "${RED}Resume file not found: $RESUME${NC}"
+        echo -e "${YELLOW}Please update the resume path in settings.${NC}"
+        read -p "Press Enter to continue..."
+        return 1
+    fi
+    
+    mkdir -p "$OUTPUT_DIR"
     local output="${OUTPUT_DIR}/linkedin_job_$(date +%Y%m%d_%H%M%S).json"
-    local cmd="python process_linkedin_job.py linkedin --url \"$job_url\" --output \"$output\" --resume \"$RESUME\""
+    local cmd="python \"${SCRIPT_DIR}/main.py\" linkedin --url \"$job_url\" --output \"$output\" --resume \"$RESUME\""
     cmd+=" --matching-mode \"$MATCHING_MODE\""
     cmd+=" --tfidf-weight \"$TFIDF_WEIGHT\" --keyword-weight \"$KEYWORD_WEIGHT\" --title-weight \"$TITLE_WEIGHT\""
     
@@ -189,7 +230,23 @@ find_matching_jobs() {
     echo -e "${YELLOW}Find Matching LinkedIn Jobs${NC}"
     echo
     
-    local cmd="./find_matching_linkedin_jobs.sh --resume \"$RESUME\" --input \"$JOBS\" --output \"$OUTPUT_DIR\""
+    # Check if required files exist
+    if [ ! -f "$RESUME" ]; then
+        echo -e "${RED}Resume file not found: $RESUME${NC}"
+        echo -e "${YELLOW}Please update the resume path in settings.${NC}"
+        read -p "Press Enter to continue..."
+        return 1
+    fi
+    
+    if [ ! -f "$JOBS" ]; then
+        echo -e "${RED}Jobs input file not found: $JOBS${NC}"
+        echo -e "${YELLOW}Please update the jobs input path in settings or process a LinkedIn search URL first.${NC}"
+        read -p "Press Enter to continue..."
+        return 1
+    fi
+    
+    mkdir -p "$OUTPUT_DIR"
+    local cmd="\"${SCRIPT_DIR}/find_matching_linkedin_jobs.sh\" --resume \"$RESUME\" --input \"$JOBS\" --output \"$OUTPUT_DIR\""
     cmd+=" --mode \"$MATCHING_MODE\""
     cmd+=" --tfidf-weight \"$TFIDF_WEIGHT\" --keyword-weight \"$KEYWORD_WEIGHT\" --title-weight \"$TITLE_WEIGHT\""
     
@@ -236,14 +293,68 @@ change_settings() {
         
         case $choice in
             1)
-                read -p "Enter new resume path: " RESUME
+                read -p "Enter new resume path: " new_resume
+                # Convert to absolute path if it's a relative path
+                if [[ ! "$new_resume" =~ ^/ ]]; then
+                    # Path is relative, make it absolute
+                    new_resume="${PWD}/${new_resume}"
+                    echo -e "${BLUE}Converting to absolute path: $new_resume${NC}"
+                fi
+                
+                if [ -f "$new_resume" ]; then
+                    RESUME="$new_resume"
+                    echo -e "${GREEN}Resume path updated successfully.${NC}"
+                else
+                    echo -e "${RED}Warning: File not found: $new_resume${NC}"
+                    echo -e "${YELLOW}Are you sure you want to use this path? (y/N)${NC} "
+                    read confirm
+                    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                        RESUME="$new_resume"
+                        echo -e "${YELLOW}Resume path set to non-existent file. Please ensure it exists before running jobs.${NC}"
+                    else
+                        echo -e "${YELLOW}Resume path unchanged.${NC}"
+                    fi
+                fi
+                sleep 1
                 ;;
             2)
-                read -p "Enter new jobs input path: " JOBS
+                read -p "Enter new jobs input path: " new_jobs
+                # Convert to absolute path if it's a relative path
+                if [[ ! "$new_jobs" =~ ^/ ]]; then
+                    # Path is relative, make it absolute
+                    new_jobs="${PWD}/${new_jobs}"
+                    echo -e "${BLUE}Converting to relative path: $new_jobs${NC}"
+                fi
+                
+                if [ -f "$new_jobs" ]; then
+                    JOBS="$new_jobs"
+                    echo -e "${GREEN}Jobs path updated successfully.${NC}"
+                else
+                    echo -e "${RED}Warning: File not found: $new_jobs${NC}"
+                    echo -e "${YELLOW}Are you sure you want to use this path? (y/N)${NC} "
+                    read confirm
+                    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                        JOBS="$new_jobs"
+                        echo -e "${YELLOW}Jobs path set to non-existent file. Please ensure it exists before running jobs.${NC}"
+                    else
+                        echo -e "${YELLOW}Jobs path unchanged.${NC}"
+                    fi
+                fi
+                sleep 1
                 ;;
             3)
-                read -p "Enter new output directory: " OUTPUT_DIR
-                mkdir -p "$OUTPUT_DIR"
+                read -p "Enter new output directory: " new_output_dir
+                # Convert to absolute path if it's a relative path
+                if [[ ! "$new_output_dir" =~ ^/ ]]; then
+                    # Path is relative, make it absolute
+                    new_output_dir="${PWD}/${new_output_dir}"
+                    echo -e "${BLUE}Converting to absolute path: $new_output_dir${NC}"
+                fi
+                
+                mkdir -p "$new_output_dir"
+                OUTPUT_DIR="$new_output_dir"
+                echo -e "${GREEN}Output directory created and updated: $OUTPUT_DIR${NC}"
+                sleep 1
                 ;;
             4)
                 echo "Available modes: standard, strict, lenient"

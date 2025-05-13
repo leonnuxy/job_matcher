@@ -1,2 +1,4 @@
-Python developer, Calgary, 48
-DevOps engineer, Edmonton, 48
+Software Developer, Calgary, 24
+Data Analyst, Calgary, 24
+Dev Ops Engineer, Calgary, 24
+AI/ML Engineer, Calgary, 24

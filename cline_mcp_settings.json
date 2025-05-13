@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "github.com/modelcontextprotocol/servers/tree/main/src/filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/noel/Documents/Projects-Local/job_matcher"
+      ],
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}

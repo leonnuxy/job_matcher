@@ -81,7 +81,7 @@ def search_google_for_jobs(
     if not GOOGLE_API_KEY or not engine:
         logging.error("Missing Google CSE credentials")
         return []
-    q = f"{term} job" + (f" in {location}" if location else "")
+    q = f"{term} job -site:indeed.com" + (f" in {location}" if location else "") # Exclude indeed.com
     params = {
         "key": GOOGLE_API_KEY,
         "cx": engine,

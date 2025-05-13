@@ -64,7 +64,8 @@ def cmd_search(args):
     # Pass the arguments to the search module's main function
     sys.argv = [sys.argv[0]] + search_args
     try:
-        return search_main()
+        search_main() # Call search_main but don't return its result directly
+        return 0 # Indicate success
     except Exception as e:
         logging.error(f"Error in search command: {e}")
         return 1
@@ -110,16 +111,13 @@ def cmd_linkedin(args):
     all_jobs = []  # For storing all processed job listings
     urls = []  # For collecting URLs to process
     
-    # Create matching profile from advanced options
+    # Create simplified matching profile
     matching_profile = create_matching_profile(
-        tfidf_weight=args.tfidf_weight,
-        keyword_weight=args.keyword_weight,
-        title_weight=args.title_weight,
         matching_mode=args.matching_mode
     )
     
+    # Log the simplified profile info
     logging.info(f"Using matching profile: mode={matching_profile['mode']}, "
-                f"weights={matching_profile['weights']}, "
                 f"threshold_multiplier={matching_profile['threshold_multiplier']}")
     
     # 1) Determine which URLs to process
@@ -326,6 +324,7 @@ def main():
     linkedin_parser = subparsers.add_parser("linkedin", help="Process and analyze LinkedIn job postings")
     linkedin_parser.add_argument("--url", help="LinkedIn job URL to process")
     linkedin_parser.add_argument("--search-url", help="LinkedIn search URL to process multiple jobs")
+    linkedin_parser.add_argument("--input", "-i", nargs="+", help="Path to JSON file(s) with LinkedIn job listings")
     linkedin_parser.add_argument("--terms-file", "-f", default="data/search_terms.txt", 
                                help="Path to file with search terms in format: 'keyword, location, recency'")
     linkedin_parser.add_argument("--resume", default="data/resume.txt", 

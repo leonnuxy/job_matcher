@@ -16,7 +16,7 @@ from services.utils import save_optimized_resume
 
 # Define model names for different providers
 MODEL_MAP = {
-    "gemini": "gemini-1.5-flash",
+    "gemini": "gemini-2.5-flash",
     "openai": "gpt-4.1-mini"  # or whatever OpenAI model you prefer
 }
 

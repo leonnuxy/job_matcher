@@ -226,6 +226,40 @@ def fetch_job_via_api(job_url: str, save_html: bool = False, resume_text: Option
         if job_info.get("description"):
             job_info["link"] = job_url
             
+            # Try to extract title from URL if it's "Unknown Title"
+            if not job_info.get('title') or job_info.get('title') == "Unknown Title":
+                # Extract title from LinkedIn URL if possible
+                if 'linkedin.com/jobs/view/' in job_url:
+                    # Handle different URL formats
+                    if '-at-' in job_url:
+                        # Format: job-title-at-company-jobid
+                        parts = job_url.split('linkedin.com/jobs/view/')[1].split('-at-')
+                        if len(parts) >= 1:
+                            # Clean up the title part
+                            title_part = parts[0]
+                            # Remove trailing job ID if present
+                            if title_part and title_part[-1].isdigit():
+                                title_part = '-'.join(title_part.split('-')[:-1])
+                                
+                            title = title_part.replace('-', ' ').strip()
+                            # Capitalize first letter of each word for proper title case
+                            job_info['title'] = ' '.join(word.capitalize() for word in title.split())
+                            
+                            # Extract company from URL if missing
+                            if (not job_info.get('company') or job_info.get('company') == 'Unknown Company') and len(parts) > 1:
+                                company_part = parts[1].split('?')[0]
+                                company = company_part.replace('-', ' ').title()
+                                job_info['company'] = company.strip()
+                    else:
+                        # Format: jobid without title in URL
+                        # Extract the job ID and use it as placeholder
+                        try:
+                            job_id = job_url.split('linkedin.com/jobs/view/')[1].split('?')[0]
+                            if job_id.isdigit():
+                                job_info['title'] = "LinkedIn Job #" + job_id
+                        except:
+                            pass
+            
             # Calculate match score if resume text is provided
             if resume_text:
                 job_info['keywords'] = []
