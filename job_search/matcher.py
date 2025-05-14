@@ -26,9 +26,14 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from optimizer.optimize import optimize_resume
-from services.utils import save_optimized_resume
-from services.cover_letter import load_cover_letter_template, generate_cover_letter, save_cover_letter
+# Updated import from optimizer.optimize
+from optimizer.optimize import optimize_resume_and_generate_cover_letter 
+# Imports from services
+from services.utils import save_optimized_resume, extract_text_between_delimiters # save_cover_letter (generic) removed
+from services.cover_letter import save_cover_letter # Specialized save for cover letters (includes sanitization)
+# Note: services.cover_letter.generate_cover_letter (template-based) is superseded by LLM,
+# but save_cover_letter and sanitize_cover_letter from this module are still used for processing LLM output.
+import argparse # Ensure argparse is imported
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -337,65 +342,63 @@ def optimize_for_job(resume: str, job: Dict, generate_cover_letter_flag: bool = 
     job_title = job.get('title', 'Unknown Job')
     job_company = job.get('company', 'Unknown Company')
     job_description = job.get('description', '')
-    
+
     if not job_description:
         logging.error(f"No job description found for {job_title} at {job_company}")
         return None, None, None
-    
-    # Load prompt template for resume
+
+    # Always use the main prompt.txt which now includes cover letter instructions
     prompt_template = load_prompt_template()
     if not prompt_template:
+        logging.error("Failed to load the main prompt template.")
         return None, None, None
     
-    # Generate optimized resume
-    logging.info(f"Optimizing resume for: {job_title} at {job_company}")
-    optimized_md = optimize_resume(resume, job_description, prompt_template)
-    
-    if not optimized_md:
-        logging.error("Failed to optimize resume")
-        return None, None, None
-    
-    # Create safe filename components
-    job_title_safe = "".join(c if c.isalnum() else "_" for c in job_title)
-    company_safe = "".join(c if c.isalnum() else "_" for c in job_company)
-    custom_suffix = f"{job_title_safe}_{company_safe}"
-    
-    # Save optimized resume
-    resume_output_path = save_optimized_resume(
-        optimized_md,
-        OUTPUT_DIR,
-        include_timestamp=True,
-        custom_suffix=custom_suffix
+    logging.info(f"Optimizing resume and generating cover letter (if enabled) for: {job_title} at {job_company}")
+
+    # Prepare job info for the cover letter
+    job_info = {
+        'title': job_title,
+        'company': job_company,
+        'description': job_description
+    }
+
+    optimized_resume_md, cover_letter_md = optimize_resume_and_generate_cover_letter(
+        resume, job_description, prompt_template, job_info
     )
-    
-    cover_letter_path = None
-    if generate_cover_letter_flag:
-        # Generate cover letter
-        logging.info(f"Generating cover letter for: {job_title} at {job_company}")
-        cover_letter_template = load_cover_letter_template()
+
+    resume_output_path = None
+    if optimized_resume_md:
+        job_title_safe = "".join(c if c.isalnum() else "_" for c in job_title)
+        company_safe = "".join(c if c.isalnum() else "_" for c in job_company)
+        custom_resume_suffix = f"{job_title_safe}_{company_safe}"
         
-        if cover_letter_template:
-            # Fill in the template with job details
-            filled_letter = generate_cover_letter(job, cover_letter_template)
-            
-            if filled_letter:
-                # Save the cover letter
-                cover_letter_path = save_cover_letter(
-                    filled_letter,
-                    OUTPUT_DIR,
-                    include_timestamp=True,
-                    custom_suffix=custom_suffix
-                )
-                if cover_letter_path:
-                    logging.info(f"Cover letter saved to: {cover_letter_path}")
-                else:
-                    logging.error("Failed to save cover letter")
-            else:
-                logging.error("Failed to generate cover letter")
-        else:
-            logging.warning("Cover letter template not found, skipping cover letter generation")
-    
-    return optimized_md, resume_output_path, cover_letter_path
+        resume_output_path = save_optimized_resume(
+            optimized_resume_md,
+            OUTPUT_DIR,
+            include_timestamp=True,
+            custom_suffix=custom_resume_suffix
+        )
+        logging.info(f"Optimized resume saved to: {resume_output_path}")
+    else:
+        logging.error(f"Failed to generate optimized resume for {job_title} at {job_company}")
+
+    cover_letter_output_path = None
+    if generate_cover_letter_flag and cover_letter_md:
+        # job_info_for_cl is no longer directly passed to save_cover_letter from services.cover_letter.py
+        # as that version handles its own suffix generation and sanitization.
+        custom_cl_suffix = f"{job_title.replace(' ', '_').replace('/', '_')}_{job_company.replace(' ', '_').replace('/', '_')}"
+
+        cover_letter_output_path = save_cover_letter(
+            content=cover_letter_md,
+            out_dir=OUTPUT_DIR, # Correctly pass OUTPUT_DIR as out_dir
+            include_timestamp=True,
+            custom_suffix=custom_cl_suffix
+        )
+        logging.info(f"Cover letter saved to: {cover_letter_output_path}")
+    elif generate_cover_letter_flag and not cover_letter_md:
+        logging.warning(f"Cover letter generation was requested for {job_title} at {job_company}, but no cover letter content was extracted from LLM.")
+        
+    return optimized_resume_md, resume_output_path, cover_letter_output_path
 
 
 def load_text_file(file_path: str) -> Optional[str]:
@@ -431,9 +434,10 @@ def load_job_results(results_dir: str) -> List[Dict]:
             logging.error(f"Job search results directory not found: {results_dir}")
             return []
         
-        # Find all job search JSON files
+        # Find all job search JSON files and also check for our custom search_results_from_script.json
         result_files = [os.path.join(results_dir, f) for f in os.listdir(results_dir) 
-                      if f.startswith("job_search_") and f.endswith(".json")]
+                      if (f.startswith("job_search_") and f.endswith(".json")) or
+                         f == "search_results_from_script.json"]
         
         if not result_files:
             logging.error("No job search result files found")
@@ -637,9 +641,41 @@ def load_jobs_from_file(file_path: str) -> List[Dict]:
         return []
 
 
-def main(resume_path=None, results_dir=None, match_threshold=0.5, top_n=3, with_cover_letter=False):
+def main():
     """
-    Main entry point for job matching.
+    Main entry point for job matching when called directly.
+    Handles command-line arguments.
+    """
+    import argparse
+    parser = argparse.ArgumentParser(description="Match jobs against a resume")
+    parser.add_argument("--resume", default=RESUME_PATH, help="Path to resume file")
+    parser.add_argument("--results-dir", help="Directory with job search results or path to JSON file")
+    parser.add_argument("--min-score", type=float, default=0.5, help="Minimum match score threshold")
+    parser.add_argument("--top-n", type=int, default=3, help="Number of top matches to process")
+    parser.add_argument("--with-cover-letter", action="store_true", help="Generate cover letters")
+    parser.add_argument("--input", help="Input job search results JSON file")
+    parser.add_argument("--output", help="Output directory for optimized resumes")
+    args = parser.parse_args()
+    
+    # Use --input as results_dir if provided
+    results_path = args.input if args.input else args.results_dir
+    
+    # Use --output as output dir if provided
+    if args.output:
+        global OUTPUT_DIR
+        OUTPUT_DIR = args.output
+    
+    return run_job_matching(
+        resume_path=args.resume,
+        results_dir=results_path,
+        match_threshold=args.min_score,
+        top_n=args.top_n,
+        with_cover_letter=args.with_cover_letter
+    )
+    
+def run_job_matching(resume_path=None, results_dir=None, match_threshold=0.5, top_n=3, with_cover_letter=False):
+    """
+    Run job matching with specified parameters.
     
     Args:
         resume_path: Path to resume file
@@ -717,6 +753,7 @@ def main(resume_path=None, results_dir=None, match_threshold=0.5, top_n=3, with_
             logging.error(f"Failed to optimize resume for {job.get('title')}")
     
     logging.info("Job matching complete!")
+    return 0
     
 
 if __name__ == "__main__":

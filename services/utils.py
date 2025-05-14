@@ -281,4 +281,76 @@ def save_optimized_resume(content: str, out_dir: str = None, include_timestamp: 
         
     return filepath
 
+def extract_text_between_delimiters(text: str, start_delimiter: str, end_delimiter: str) -> Optional[str]:
+    """
+    Extracts text from a string between specified start and end delimiters.
 
+    Args:
+        text: The string to search within.
+        start_delimiter: The starting delimiter string.
+        end_delimiter: The ending delimiter string.
+
+    Returns:
+        The extracted text if both delimiters are found, otherwise None.
+    """
+    start_index = text.find(start_delimiter)
+    if start_index == -1:
+        return None
+    
+    start_index += len(start_delimiter)
+    end_index = text.find(end_delimiter, start_index)
+    if end_index == -1:
+        return None
+        
+    return text[start_index:end_index].strip()
+
+def save_cover_letter(content: str, job_info: dict, out_dir: str = None, 
+                      include_timestamp: bool = True, custom_suffix: str = "") -> str:
+    """
+    Save a cover letter to a file with proper formatting.
+    
+    Args:
+        content: The content of the cover letter.
+        job_info: A dictionary containing 'title' and 'company' for filename generation.
+        out_dir: Output directory path (optional).
+        include_timestamp: Whether to include a timestamp in the filename.
+        custom_suffix: Optional custom suffix for the filename, overrides job_info if provided.
+        
+    Returns:
+        str: The path to the saved cover letter file.
+    """
+    if out_dir is None:
+        out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                              "data", "optimization_results") # Consistent with resume saving
+    os.makedirs(out_dir, exist_ok=True)
+    
+    timestamp_str = f"_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}" if include_timestamp else ""
+    
+    file_suffix = ""
+    if custom_suffix:
+        file_suffix = custom_suffix.replace(" ", "_").replace("/", "_")
+    elif job_info and job_info.get("title") and job_info.get("company"):
+        job_title_safe = job_info["title"].replace(" ", "_").replace("/", "_")
+        company_safe = job_info["company"].replace(" ", "_").replace("/", "_")
+        file_suffix = f"{job_title_safe}_{company_safe}"
+    else:
+        file_suffix = "UnknownJob_UnknownCompany"
+
+    filename = f"CoverLetter_{file_suffix}{timestamp_str}.md"
+    filepath = os.path.join(out_dir, filename)
+    
+    with open(filepath, "w", encoding='utf-8') as f:
+        f.write(content)
+        
+    # Create a symlink to the latest cover letter
+    latest_path = os.path.join(out_dir, "latest_cover_letter.md")
+    try:
+        if os.path.exists(latest_path):
+            os.remove(latest_path)
+        os.symlink(os.path.basename(filepath), latest_path)
+    except Exception as e:
+        # Symlink creation is not critical, log a warning or ignore
+        # print(f"Warning: Could not create symlink for latest cover letter: {e}")
+        pass
+        
+    return filepath

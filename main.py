@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # main.py
 """
-Main entry point for the job_matcher application with a centralized CLI system.
+Main entry point for t    if args.output:
+        search_args.extend(["--output", args.output]) job_matcher application with a centralized CLI system.
 
 This script provides a unified command-line interface with subcommands for all job_matcher functionalities:
 - search: Search for jobs across multiple platforms
@@ -59,6 +60,10 @@ def cmd_search(args):
         search_args.extend(["--max-jobs", str(args.max_jobs)])
     if args.output:
         search_args.extend(["--output", args.output])
+    if args.min_score is not None:
+        search_args.extend(["--min-score", str(args.min_score)])
+    if args.with_cover_letter:
+        search_args.append("--with-cover-letter")
     
     logging.info("Running job search...")
     # Pass the arguments to the search module's main function
@@ -86,11 +91,16 @@ def cmd_match(args):
         matcher_args.extend(["--input", args.input])
     if args.format:
         matcher_args.extend(["--format", args.format])
+    if args.with_cover_letter: # Pass the new flag
+        matcher_args.append("--with-cover-letter")
         
     logging.info("Running job matching...")
     # Pass the arguments to the matcher module's main function
     sys.argv = [sys.argv[0]] + matcher_args
     try:
+        # matcher_main needs to be able to accept these args if we are modifying sys.argv
+        # Alternatively, pass args directly: return matcher_main(args)
+        # For now, assuming matcher_main uses argparse internally on sys.argv
         return matcher_main()
     except Exception as e:
         logging.error(f"Error in match command: {e}")
@@ -308,6 +318,10 @@ def main():
                              help="Maximum jobs to fetch per board/location")
     search_parser.add_argument("--simulate", action="store_true", help="Run in simulation mode")
     search_parser.add_argument("--output", help="Output file to save results")
+    search_parser.add_argument("--with-cover-letter", action="store_true",
+                             help="Generate cover letters alongside optimized resumes")
+    search_parser.add_argument("--min-score", type=float, default=0.6,
+                             help="Minimum match score (0-1)")
     search_parser.set_defaults(func=cmd_search)
     
     # Match command
@@ -318,6 +332,8 @@ def main():
     match_parser.add_argument("--output", help="Output file to save results")
     match_parser.add_argument("--format", choices=["json", "markdown", "both"], default="both",
                             help="Output format (json, markdown, or both)")
+    match_parser.add_argument("--with-cover-letter", action="store_true",
+                            help="Generate cover letters alongside optimized resumes")
     match_parser.set_defaults(func=cmd_match)
     
     # LinkedIn command

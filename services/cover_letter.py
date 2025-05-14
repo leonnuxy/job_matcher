@@ -6,6 +6,7 @@ based on templates and job details.
 import os
 import re
 import logging
+import datetime
 from typing import Dict, Optional, Any, List, Set
 
 def load_cover_letter_template() -> Optional[str]:
@@ -196,6 +197,86 @@ def generate_cover_letter(job: Dict[str, Any], template: str) -> str:
     
     return filled_letter
 
+def sanitize_cover_letter(content: str) -> str:
+    """
+    Process a cover letter to replace common placeholders with appropriate values.
+    
+    Args:
+        content: The cover letter content to sanitize
+        
+    Returns:
+        str: Sanitized cover letter content
+    """
+    if not content:
+        return content
+        
+    today = datetime.datetime.now().strftime('%B %d, %Y')
+        
+    # Replace job platform placeholders - added flag for case-insensitive matching
+    content = re.sub(r'\[Platform where you saw the.*?\]', 'LinkedIn job board', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[.*?job board.*?\]', 'LinkedIn job board', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[.*?job posting.*?\]', 'LinkedIn job board', content, flags=re.IGNORECASE)
+    
+    # Replace company-specific placeholders
+    content = re.sub(r'\[mention a specific area of the company\'s work.*?\]', 
+                    'developing innovative solutions in the industry', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[.*?specific area of.*?work.*?\]',
+                    'developing cutting-edge technology', content, flags=re.IGNORECASE)
+    
+    # Replace other common placeholders with generic values
+    content = re.sub(r'\[mention a positive aspect of the company.*?\]', 
+                    'delivering innovative solutions', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[.*?positive aspect.*?\]', 
+                    'innovation and technical excellence', content, flags=re.IGNORECASE)
+                    
+    # Replace opening hook if missing
+    content = re.sub(r'\[Opening hook that highlights.*?\]', 
+                    'With 3+ years of experience developing scalable AI/ML solutions and containerized cloud applications, I am excited to apply for this opportunity.', 
+                    content, flags=re.IGNORECASE)
+    
+    # Replace paragraphs if missing
+    content = re.sub(r'\[Paragraph connecting specific.*?\]', 
+                    'At APEGA, I developed containerized AI/ML applications using Python and TensorFlow on AWS, reducing model deployment time by 40% while maintaining 99.9% uptime for critical data pipelines.', 
+                    content, flags=re.IGNORECASE)
+                    
+    content = re.sub(r'\[Paragraph linking another.*?\]', 
+                    'I implemented automated testing workflows with PyTest and GitHub Actions at APEGA, achieving a defect rate below 0.5%. Additionally, I\'ve authored complex SQL transformations powering dashboards used by 30K+ users.', 
+                    content, flags=re.IGNORECASE)
+                    
+    content = re.sub(r'\[Brief statement about interest.*?\]', 
+                    'I\'m eager to collaborate with your team of experts and contribute to innovative solutions that drive real business impact.', 
+                    content, flags=re.IGNORECASE)
+    
+    # Additional common placeholders
+    content = re.sub(r'\[your address\]', 'Calgary, Alberta', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[city, state, zip\]', 'Calgary, AB T2P 3E5', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[your email\]', '1leonnoel1@gmail.com', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[your phone number\]', '306-490-2929', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[date\]', today, content, flags=re.IGNORECASE)
+    content = re.sub(r'\[current date\]', today, content, flags=re.IGNORECASE)
+    content = re.sub(r'\[company address\]', '', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[company headquarters\]', '', content, flags=re.IGNORECASE)
+    
+    # Fix any possessive company names with apostrophe issues (Company's vs Companys)
+    content = re.sub(r'(\w+)s\'s\s', r"\1's ", content)
+    content = re.sub(r'([A-Za-z]+[^s])s\s', r"\1's ", content)
+    
+    # Fix any double spaces
+    content = re.sub(r'  +', ' ', content)
+    
+    # Fix extra blank lines between paragraphs (standardize to one blank line)
+    content = re.sub(r'\n{3,}', '\n\n', content)
+    
+    # Fix line spacing around salutation and signature
+    content = re.sub(r'Dear Hiring Manager,\s*\n', 'Dear Hiring Manager,\n\n', content)
+    content = re.sub(r'Sincerely,\s*\n', 'Sincerely,\n\n', content)
+    
+    # Generic catch-all for any remaining [placeholders]
+    content = re.sub(r'\[.*?\]', '', content, flags=re.IGNORECASE)
+    
+    return content
+
+
 def save_cover_letter(content: str, out_dir: str, include_timestamp: bool = True, 
                      custom_suffix: str = "") -> str:
     """
@@ -210,7 +291,8 @@ def save_cover_letter(content: str, out_dir: str, include_timestamp: bool = True
     Returns:
         str: Path to the saved file
     """
-    import datetime
+    # Clean up common placeholders in the cover letter
+    content = sanitize_cover_letter(content)
     
     # Create the output directory if it doesn't exist
     os.makedirs(out_dir, exist_ok=True)

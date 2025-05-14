@@ -1,0 +1,71 @@
+---BEGIN_RESUME---
+# NOEL UGWOKE
+Calgary, Alberta | 306-490-2929 | 1leonnoel1@gmail.com | [LinkedIn](https://www.linkedin.com/in/noelugwoke/) | [Portfolio](https://noelugwoke.com/)
+
+## TECHNICAL SKILLS
+- **Languages & Frameworks:** Python, TypeScript/Node.js, SQL, Java, JavaScript, C++, C#
+- **Data & Analytics:** Apache Spark, Kafka, AWS S3/EMR, dbt, Snowflake/Redshift, Glue Catalog, Pandas
+- **Cloud & DevOps:** Docker, Kubernetes, GitHub Actions, Jenkins, Terraform, Serverless (AWS-Lambda)
+- **Testing & Quality:** PyTest, Jest, Data-quality checks, CI pipelines, Code reviews
+- **Processes:** Agile/Scrum, Test‑Driven Development, Design patterns, Continuous Delivery
+- **Machine Learning:** TensorFlow, PyTorch, Scikit-learn, MLOps, Feature Engineering
+
+## PROFESSIONAL EXPERIENCE
+
+**Software Engineer (Cloud & Data)**
+APEGA | Calgary, AB | Dec 2022 – Dec 2024
+* Developed and deployed scalable, containerized AI/ML applications on AWS using Kubernetes, leveraging Python, TensorFlow, and PyTorch.
+* Authored complex SQL transformations and materialised views powering dashboards used by 30K+ users.
+* Automated nightly pipeline tests with PyTest & GitHub Actions; defect rate ► < 0.5%.
+* Led peer code reviews and sprint retros; mentored two juniors on SQL optimisation.
+* Built GitHub Actions workflow that unit tested, and auto published Lambda artefacts; deploy time ▼ 35%.
+
+**Tools Used:** Python, SQL, PyTorch, Kubernetes, AWS, MLOps, Docker, Git, Agile/Scrum
+
+**Software Developer – WebApps (DevOps)**
+Spartan Controls | Calgary, AB | Jul 2021 – Nov 2022
+* Developed React applications for IoT dashboards, optimizing load times and user interface responsiveness, which led to a 40% increase in user engagement.
+* Utilized Java to develop RESTful APIs for user authentication, data retrieval, and real-time notifications, enhancing functionality and scalability.
+* Implemented serverless functions using AWS Lambda to handle specific backend tasks efficiently.
+* Built CI/CD pipelines using Jenkins for automated testing and deployment utilizing Docker and Kubernetes.
+
+**Tools Used:** Java, JavaScript, RESTful APIs, React, AWS Lambda, Jenkins, Docker, Kubernetes
+
+## KEY PROJECT
+**AI Resume Optimizer** | Personal Project | 2023
+* Designed a Python/MySQL application to analyze resumes against job descriptions, improving alignment for 100+ test users.
+**[Python, MySQL, NLP, Ollama, Mistral]**
+
+## EDUCATION & CERTIFICATIONS
+* **BSc. Computer Science**, University of Calgary | 2016–2022
+* **AWS Certified Cloud Practitioner**, Amazon Web Services | Jan 2023
+* **Google Cloud Professional Developer**, Google Cloud | 2023–2026
+---END_RESUME---
+
+---BEGIN_COVER_LETTER---
+Noel Ugwoke  
+Calgary, Alberta  
+306-490-2929  
+1leonnoel1@gmail.com  
+
+[Date]
+
+Hiring Manager  
+[Company Name]  
+[Company Location, if provided]  
+
+Dear Hiring Manager,
+
+With 3+ years of experience developing scalable AI/ML solutions and containerized cloud applications, I am excited to apply for the [Job Title] position at [Company Name] as advertised on [Platform where you saw the ad].
+
+At APEGA, I developed containerized AI/ML applications using Python and TensorFlow on AWS and Kubernetes, similar to the cloud-based infrastructure mentioned in your job requirements. My work reduced model deployment time by 40% while maintaining 99.9% uptime for critical data pipelines.
+
+I implemented automated testing workflows with PyTest and GitHub Actions at APEGA, achieving a defect rate below 0.5% – directly relevant to your team's focus on code quality and reliability. Additionally, I've authored complex SQL transformations that power dashboards used by 30K+ users, demonstrating my ability to work with large datasets.
+
+I am particularly drawn to [Company Name]'s work in [Mention a specific area of the company's work if known, otherwise, mention something positive like "cutting-edge technology" or "impactful projects"]. I'm eager to collaborate with your team of experts and contribute to innovative solutions that drive real business impact.
+
+Thank you for considering my application. I welcome the opportunity to discuss how my technical expertise aligns with your needs for the [Job Title] role.
+
+Sincerely,  
+Noel Ugwoke
+---END_COVER_LETTER---

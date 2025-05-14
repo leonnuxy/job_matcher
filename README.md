@@ -1,13 +1,61 @@
 # Job Matching and Resume Optimization Project
 
-This project aims to automate the process of finding relevant job postings, extracting job requirements, matching your resume to those requirements, optimizing your resume for Applicant Tracking Systems (ATS), and generating tailored cover letters.
+This project aims to automate the process of finding relevant job postings, extracting job requirements, matching your resume to those requiremen3. Save both to `data/optimization_results/` with timestamps and job details in filenames
+ 
+Output Naming Convention:
+- Resumes: `Resume_JobTitle_Company_[timestamp].md`
+- Cover Letters: `CoverLetter_JobTitle_Company_[timestamp].md`
+
+Symlinks to the latest versions are maintained at:
+- `data/optimization_results/latest_resume.md`
+
+### Using the Consolidated Optimizer
+
+Starting from May 2025, a consolidated optimizer module is available that combines all the functionality from the separate optimizer files into a single module.
+
+**For New Code:**
+
+```python
+# Direct import of the consolidated module
+from optimizer import optimizer
+
+# Basic resume optimization
+optimized_resume = optimizer.optimize_resume(resume_text, job_description, prompt_template)
+
+# Enhanced resume optimization with keyword matching
+match_analysis = optimizer.analyze_job_resume_match(resume_text, job_description)
+optimized_resume, output_path, match_analysis = optimizer.optimize_resume_with_enhanced_matching(
+    resume_text, job_description, prompt_template, output_dir
+)
+
+# Resume + cover letter generation
+optimized_resume, cover_letter = optimizer.optimize_resume_and_generate_cover_letter(
+    resume_text, job_description, prompt_template, job_info
+)
+```
+
+**Command Line Usage:**
+
+You can test the consolidated optimizer from the command line:
+
+```bash
+python -m optimizer.optimizer --resume data/resume.txt --job data/job_descriptions/job_description.txt
+```
+
+Optional flags:
+- `--no-cover-letter` - Skip cover letter generation
+- `--analyze-only` - Only analyze match without generating resume
+- `--basic` - Use basic optimization without enhanced matchingmizing your resume for Applicant Tracking Systems (ATS), and generating tailored cover letters.
 
 ## Project Structure
 
 The project is organized into several modules:
 
 - **optimizer/** - Resume optimization functionality
-  - `optimize.py` - Core optimization logic using AI
+  - `optimizer.py` - Consolidated optimization module (recommended for new code)
+  - `optimize.py` - Original basic optimization logic (maintained for compatibility)
+  - `enhanced_optimizer.py` - Enhanced resume matching (maintained for compatibility)
+  - `enhanced_optimizer_with_cover_letter.py` - Cover letter generation (maintained for compatibility)
   
 - **services/** - Supporting services
   - `llm_client.py` - Client for interacting with AI language models
