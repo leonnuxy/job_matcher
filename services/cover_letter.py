@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
 Cover letter generation module that creates customized cover letters
-based on templates and job details.
+based on templates and job details. This is the central module for all
+cover letter related functionality, including generation, sanitization,
+extraction from LLM responses, and saving to files.
 """
 import os
 import re
 import logging
 import datetime
-from typing import Dict, Optional, Any, List, Set
+from typing import Dict, Optional, Any, List, Set, Tuple, Union
+from pathlib import Path
 
 def load_cover_letter_template() -> Optional[str]:
     """
@@ -197,12 +200,13 @@ def generate_cover_letter(job: Dict[str, Any], template: str) -> str:
     
     return filled_letter
 
-def sanitize_cover_letter(content: str) -> str:
+def sanitize_cover_letter(content: str, job: Optional[Dict] = None) -> str:
     """
     Process a cover letter to replace common placeholders with appropriate values.
     
     Args:
         content: The cover letter content to sanitize
+        job: Optional dictionary containing job details (title, company, etc.)
         
     Returns:
         str: Sanitized cover letter content
@@ -211,28 +215,77 @@ def sanitize_cover_letter(content: str) -> str:
         return content
         
     today = datetime.datetime.now().strftime('%B %d, %Y')
+    
+    # Extract job info if available
+    company_name = job.get('company', 'the company') if job else 'the company'
+    job_title = job.get('title', 'the position') if job else 'the position'
+    job_description = job.get('description', '') if job else ''
+    company_location = job.get('location', 'Remote') if job else 'Remote'
+    
+    # Replace company name placeholders
+    content = re.sub(r'\[Company Name\]', company_name, content, flags=re.IGNORECASE)
+    content = re.sub(r'\[company\]', company_name, content, flags=re.IGNORECASE)
+    
+    # Replace job title placeholders
+    content = re.sub(r'\[Job Title\]', job_title, content, flags=re.IGNORECASE)
+    content = re.sub(r'\[position\]', job_title, content, flags=re.IGNORECASE)
+    content = re.sub(r'\[job title\]', job_title, content, flags=re.IGNORECASE)
         
     # Replace job platform placeholders - added flag for case-insensitive matching
     content = re.sub(r'\[Platform where you saw the.*?\]', 'LinkedIn job board', content, flags=re.IGNORECASE)
     content = re.sub(r'\[.*?job board.*?\]', 'LinkedIn job board', content, flags=re.IGNORECASE)
     content = re.sub(r'\[.*?job posting.*?\]', 'LinkedIn job board', content, flags=re.IGNORECASE)
     
-    # Replace company-specific placeholders
+    # Replace company-specific placeholders with context-aware replacements
+    company_focus = ""
+    if job:
+        if "AI" in company_name or "machine" in company_name.lower() or "tech" in company_name.lower():
+            company_focus = "developing innovative AI solutions"
+        elif "data" in company_name.lower():
+            company_focus = "transforming data into valuable business insights"
+        elif "health" in company_name.lower() or "care" in company_name.lower() or "med" in company_name.lower():
+            company_focus = "improving healthcare outcomes through technology"
+        elif "finance" in company_name.lower() or "bank" in company_name.lower():
+            company_focus = "revolutionizing financial services through technology"
+        else:
+            company_focus = "developing innovative solutions in the industry"
+    else:
+        company_focus = "developing innovative solutions in the industry"
+    
     content = re.sub(r'\[mention a specific area of the company\'s work.*?\]', 
-                    'developing innovative solutions in the industry', content, flags=re.IGNORECASE)
+                    company_focus, content, flags=re.IGNORECASE)
     content = re.sub(r'\[.*?specific area of.*?work.*?\]',
-                    'developing cutting-edge technology', content, flags=re.IGNORECASE)
+                    company_focus, content, flags=re.IGNORECASE)
     
     # Replace other common placeholders with generic values
     content = re.sub(r'\[mention a positive aspect of the company.*?\]', 
                     'delivering innovative solutions', content, flags=re.IGNORECASE)
     content = re.sub(r'\[.*?positive aspect.*?\]', 
                     'innovation and technical excellence', content, flags=re.IGNORECASE)
+    
+    # Replace location placeholders
+    content = re.sub(r'\[Company Location.*?\]', company_location, content, flags=re.IGNORECASE)
                     
-    # Replace opening hook if missing
-    content = re.sub(r'\[Opening hook that highlights.*?\]', 
-                    'With 3+ years of experience developing scalable AI/ML solutions and containerized cloud applications, I am excited to apply for this opportunity.', 
-                    content, flags=re.IGNORECASE)
+    # Handle opening hook placeholder with context awareness
+    skills_hook = ""
+    if job and job_title:
+        if "machine learning" in job_title.lower() or "ml" in job_title.lower() or "ai" in job_title.lower():
+            skills_hook = "With 3+ years of experience developing scalable AI/ML solutions and containerized cloud applications"
+        elif "data" in job_title.lower():
+            skills_hook = "With extensive experience in data pipeline development and analytics using SQL, Python, and cloud platforms"
+        elif "devops" in job_title.lower() or "cloud" in job_title.lower():
+            skills_hook = "With hands-on expertise in implementing cloud infrastructure and DevOps practices using Docker, Kubernetes, and CI/CD pipelines"
+        elif "front" in job_title.lower() or "ui" in job_title.lower() or "ux" in job_title.lower():
+            skills_hook = "With a proven record of developing responsive and performant user interfaces using modern JavaScript frameworks"
+        else:
+            skills_hook = "With 3+ years of experience in software development and cloud technologies"
+    else:
+        skills_hook = "With 3+ years of experience developing scalable AI/ML solutions and containerized cloud applications"
+    
+    hook_pattern = r'\[Opening hook that highlights.*?\]'
+    if re.search(hook_pattern, content, re.IGNORECASE):
+        replacement = f"{skills_hook}, I am excited to apply for the {job_title} position at {company_name}." if job else f"{skills_hook}, I am excited to apply for this opportunity."
+        content = re.sub(hook_pattern, replacement, content, flags=re.IGNORECASE)
     
     # Replace paragraphs if missing
     content = re.sub(r'\[Paragraph connecting specific.*?\]', 
@@ -252,14 +305,18 @@ def sanitize_cover_letter(content: str) -> str:
     content = re.sub(r'\[city, state, zip\]', 'Calgary, AB T2P 3E5', content, flags=re.IGNORECASE)
     content = re.sub(r'\[your email\]', '1leonnoel1@gmail.com', content, flags=re.IGNORECASE)
     content = re.sub(r'\[your phone number\]', '306-490-2929', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[your name\]', 'Noel Ugwoke', content, flags=re.IGNORECASE)
     content = re.sub(r'\[date\]', today, content, flags=re.IGNORECASE)
     content = re.sub(r'\[current date\]', today, content, flags=re.IGNORECASE)
     content = re.sub(r'\[company address\]', '', content, flags=re.IGNORECASE)
     content = re.sub(r'\[company headquarters\]', '', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[hiring manager\'s name\]', 'Hiring Manager', content, flags=re.IGNORECASE)
+    content = re.sub(r'\[hiring manager\]', 'Hiring Manager', content, flags=re.IGNORECASE)
     
     # Fix any possessive company names with apostrophe issues (Company's vs Companys)
-    content = re.sub(r'(\w+)s\'s\s', r"\1's ", content)
-    content = re.sub(r'([A-Za-z]+[^s])s\s', r"\1's ", content)
+    # Temporarily disabled as it's causing issues with company names that end with 's'
+    # content = re.sub(r'(\w+)s\'s\s', r"\1's ", content)
+    # content = re.sub(r'([A-Za-z]+[^s])s\s', r"\1's ", content)
     
     # Fix any double spaces
     content = re.sub(r'  +', ' ', content)
@@ -336,3 +393,78 @@ def save_cover_letter(content: str, out_dir: str, include_timestamp: bool = True
         logging.warning(f"Failed to create symlink for latest cover letter: {e}")
         
     return filepath
+
+def extract_cover_letter(optimization_response: str, job: Dict = None) -> Optional[str]:
+    """
+    Extract the cover letter content from the LLM response and replace placeholders.
+    
+    Args:
+        optimization_response: The full response from the LLM
+        job: Dictionary containing job details to replace placeholders
+        
+    Returns:
+        str: Extracted cover letter text or None if not found
+    """
+    cover_letter_pattern = r"---BEGIN_COVER_LETTER---(.*?)---END_COVER_LETTER---"
+    match = re.search(cover_letter_pattern, optimization_response, re.DOTALL)
+    
+    if match:
+        cover_letter_text = match.group(1).strip()
+        
+        # Replace placeholders if job details are provided
+        if job:
+            cover_letter_text = sanitize_cover_letter(cover_letter_text, job)
+        
+        return f"---BEGIN_COVER_LETTER---\n{cover_letter_text}\n---END_COVER_LETTER---"
+    
+    return None
+
+
+def load_template(path: str) -> Optional[str]:
+    """
+    Load a cover letter template from a specified path.
+    
+    Args:
+        path: Path to the template file
+        
+    Returns:
+        str: Template text or None if not found
+    """
+    try:
+        if not os.path.exists(path):
+            logging.warning(f"Cover letter template not found at {path}")
+            return None
+            
+        with open(path, "r") as f:
+            content = f.read()
+            if not content.strip():
+                logging.warning("Cover letter template is empty")
+                return None
+            return content
+    except Exception as e:
+        logging.error(f"Error loading cover letter template: {e}")
+        return None
+
+def generate_cover_letter_from_llm_response(
+    optimization_response: str, 
+    job_info: Dict
+) -> Optional[str]:
+    """
+    Extract and process a cover letter from an LLM optimization response.
+    
+    Args:
+        optimization_response: The full response from the LLM
+        job_info: Dictionary containing job details like title and company
+        
+    Returns:
+        str: Processed cover letter text or None if extraction fails
+    """
+    # First extract the cover letter portion from the response
+    extracted_cover_letter = extract_cover_letter(optimization_response, job_info)
+    
+    if not extracted_cover_letter:
+        logging.warning("Failed to extract cover letter from LLM response")
+        return None
+        
+    # Return the extracted and sanitized cover letter
+    return extracted_cover_letter

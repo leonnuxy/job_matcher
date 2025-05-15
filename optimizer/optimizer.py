@@ -30,7 +30,8 @@ if parent_dir not in sys.path:
 
 # Import project modules
 from services.llm_client import LLMClient, LLM_PROVIDER
-from services.utils import save_optimized_resume, save_cover_letter, extract_text_between_delimiters
+from services.utils import save_optimized_resume, extract_text_between_delimiters
+from services.cover_letter import sanitize_cover_letter, save_cover_letter, extract_cover_letter
 
 # Define our own versions of the functions to avoid circular imports
 def create_matching_profile(matching_mode="strict", threshold=0.75):
@@ -356,7 +357,7 @@ def optimize_resume_and_generate_cover_letter(
             
         # Process the cover letter to replace placeholders
         if cover_letter_md and job_info:
-            cover_letter_md = sanitize_cover_letter_placeholders(cover_letter_md, job_info)
+            cover_letter_md = sanitize_cover_letter(cover_letter_md, job_info)
         
         return optimized_resume_md, cover_letter_md
 
@@ -395,112 +396,14 @@ def extract_cover_letter(optimization_response: str, job: Dict = None) -> Option
         
         # Replace placeholders if job details are provided
         if job:
-            cover_letter_text = sanitize_cover_letter_placeholders(cover_letter_text, job)
+            cover_letter_text = sanitize_cover_letter(cover_letter_text, job)
         
         return f"---BEGIN_COVER_LETTER---\n{cover_letter_text}\n---END_COVER_LETTER---"
     
     return None
 
 
-def sanitize_cover_letter_placeholders(cover_letter_text: str, job: Dict) -> str:
-    """
-    Replace common placeholder patterns in cover letters.
-    
-    Args:
-        cover_letter_text: The cover letter text with placeholders
-        job: Dictionary containing job details like title and company
-    
-    Returns:
-        str: Cover letter text with placeholders replaced
-    """
-    company_name = job.get('company', 'the company')
-    job_title = job.get('title', 'the position')
-    job_description = job.get('description', '')
-    
-    # Use regex with case-insensitivity for more consistent replacements
-    
-    # Replace company name placeholders
-    cover_letter_text = re.sub(r'\[Company Name\]', company_name, cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[company\]', company_name, cover_letter_text, flags=re.IGNORECASE)
-    
-    # Replace job title placeholders
-    cover_letter_text = re.sub(r'\[Job Title\]', job_title, cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[position\]', job_title, cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[job title\]', job_title, cover_letter_text, flags=re.IGNORECASE)
-    
-    # Replace date placeholders with current date
-    from datetime import datetime
-    today = datetime.now().strftime('%B %d, %Y')
-    cover_letter_text = re.sub(r'\[Current Date\]', today, cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[Date\]', today, cover_letter_text, flags=re.IGNORECASE)
-    
-    # Replace platform/source placeholders with LinkedIn
-    cover_letter_text = re.sub(r'\[Platform where you saw the.*?\]', 'LinkedIn job board', cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[.*?job board.*?\]', 'LinkedIn job board', cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[.*?job posting.*?\]', 'LinkedIn job board', cover_letter_text, flags=re.IGNORECASE)
-    
-    # Replace location placeholders
-    company_location = job.get('location', 'Remote')
-    cover_letter_text = re.sub(r'\[Company Location.*?\]', company_location, cover_letter_text, flags=re.IGNORECASE)
-    
-    # Handle opening hook placeholder
-    skills_hook = ""
-    if "machine learning" in job_title.lower() or "ml" in job_title.lower() or "ai" in job_title.lower():
-        skills_hook = "With 3+ years of experience developing scalable AI/ML solutions and containerized cloud applications"
-    elif "data" in job_title.lower():
-        skills_hook = "With extensive experience in data pipeline development and analytics using SQL, Python, and cloud platforms"
-    elif "devops" in job_title.lower() or "cloud" in job_title.lower():
-        skills_hook = "With hands-on expertise in implementing cloud infrastructure and DevOps practices using Docker, Kubernetes, and CI/CD pipelines"
-    elif "front" in job_title.lower() or "ui" in job_title.lower() or "ux" in job_title.lower():
-        skills_hook = "With a proven record of developing responsive and performant user interfaces using modern JavaScript frameworks"
-    else:
-        skills_hook = "With 3+ years of experience in software development and cloud technologies"
-    
-    hook_pattern = r'\[Opening hook that highlights.*?\]'
-    if re.search(hook_pattern, cover_letter_text, re.IGNORECASE):
-        cover_letter_text = re.sub(hook_pattern, 
-                                 f"{skills_hook}, I am excited to apply for the {job_title} position at {company_name}.", 
-                                 cover_letter_text, flags=re.IGNORECASE)
-    
-    # Handle specific company work area placeholders
-    company_focus = ""
-    if "AI" in company_name or "machine" in company_name.lower() or "tech" in company_name.lower():
-        company_focus = "developing innovative AI solutions"
-    elif "data" in company_name.lower():
-        company_focus = "transforming data into valuable business insights"
-    elif "health" in company_name.lower() or "care" in company_name.lower() or "med" in company_name.lower():
-        company_focus = "improving healthcare outcomes through technology"
-    elif "finance" in company_name.lower() or "bank" in company_name.lower():
-        company_focus = "revolutionizing financial services through technology"
-    else:
-        company_focus = "developing innovative solutions in the industry"
-        
-    cover_letter_text = re.sub(r'\[mention a specific area of the company\'s work.*?\]', 
-                             company_focus, cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[.*?specific area of.*?work.*?\]',
-                             company_focus, cover_letter_text, flags=re.IGNORECASE)
-    
-    # Replace personal information placeholders
-    cover_letter_text = re.sub(r'\[your address\]', 'Calgary, Alberta', cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[city, state, zip\]', 'Calgary, AB T2P 3E5', cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[your email\]', '1leonnoel1@gmail.com', cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[your phone number\]', '306-490-2929', cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[your name\]', 'Noel Ugwoke', cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[hiring manager\'s name\]', 'Hiring Manager', cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[hiring manager\]', 'Hiring Manager', cover_letter_text, flags=re.IGNORECASE)
-    
-    # Remove company address/headquarters
-    cover_letter_text = re.sub(r'\[company address\]', '', cover_letter_text, flags=re.IGNORECASE)
-    cover_letter_text = re.sub(r'\[company headquarters\]', '', cover_letter_text, flags=re.IGNORECASE)
-    
-    # Clean up any extra whitespace or line breaks from placeholder replacements
-    cover_letter_text = re.sub(r'\n{3,}', '\n\n', cover_letter_text)
-    
-    # Generic catch-all for any remaining [placeholders]
-    # Be careful to add this last so it doesn't interfere with more specific replacements above
-    cover_letter_text = re.sub(r'\[.*?\]', '', cover_letter_text, flags=re.IGNORECASE)
-    
-    return cover_letter_text
+# Using sanitize_cover_letter from services.cover_letter instead
 
 
 def extract_resume(optimization_response: str) -> str:

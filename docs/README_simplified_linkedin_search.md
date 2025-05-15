@@ -14,28 +14,28 @@ This script provides a simplified way to search for LinkedIn jobs and match them
 
 ```bash
 # Basic usage with defaults (Software Developer jobs in Canada from last 48 hours)
-./simplified_linkedin_search.py
+python src/simplified_linkedin_search.py
 
 # Search for a different job title
-./simplified_linkedin_search.py --search "Data Scientist"
+python src/simplified_linkedin_search.py --search "Data Scientist"
 
 # Search in a different location
-./simplified_linkedin_search.py --location "Remote"
+python src/simplified_linkedin_search.py --location "Remote"
 
 # Search for very recent jobs (last 24 hours)
-./simplified_linkedin_search.py --recency 24
+python src/simplified_linkedin_search.py --recency 24
 
 # Get more job results
-./simplified_linkedin_search.py --max-jobs 10
+python src/simplified_linkedin_search.py --max-jobs 10
 
 # Specify a custom output path
-./simplified_linkedin_search.py --output "my_job_results.json"
+python src/simplified_linkedin_search.py --output "my_job_results.json"
 
 # Don't export as Markdown (JSON only)
-./simplified_linkedin_search.py --no-md
+python src/simplified_linkedin_search.py --no-md
 
 # Don't use LinkedIn guest API
-./simplified_linkedin_search.py --no-api
+python src/simplified_linkedin_search.py --no-api
 ```
 
 ## How It Works

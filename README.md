@@ -125,51 +125,51 @@ The project now features a unified CLI system with subcommands for all functiona
 
 ```bash
 # Main usage pattern
-python main.py [command] [options]
+python src/main.py [command] [options]
 ```
 
 ### Available Commands
 
 - **optimize**: Optimize resume for a specific job description
   ```bash
-  python main.py optimize --job "data/job_descriptions/job_description.txt" --resume "data/resume.txt"
+  python src/main.py optimize --job "data/job_descriptions/job_description.txt" --resume "data/resume.txt"
   ```
 
 - **search**: Search for jobs across multiple platforms
   ```bash
-  python main.py search --terms "Python Developer" --locations "Remote" "Canada"
+  python src/main.py search --terms "Python Developer" --locations "Remote" "Canada"
   ```
 
 - **match**: Calculate match scores for job listings against a resume
   ```bash
-  python main.py match --min-score 0.6 --resume "data/resume.txt"
+  python src/main.py match --min-score 0.6 --resume "data/resume.txt"
   ```
 
 - **linkedin**: Process and analyze LinkedIn job postings
   ```bash
   # Process a single LinkedIn job URL
-  python main.py linkedin --url "https://www.linkedin.com/jobs/view/123456789"
+  python src/main.py linkedin --url "https://www.linkedin.com/jobs/view/123456789"
   
   # Process a LinkedIn search URL
-  python main.py linkedin --search-url "https://www.linkedin.com/jobs/search?keywords=python&location=canada"
+  python src/main.py linkedin --search-url "https://www.linkedin.com/jobs/search?keywords=python&location=canada"
   
   # Process from job search results
-  python main.py linkedin --input "data/job_search_results/job_search_latest.json"
+  python src/main.py linkedin --input "data/job_search_results/job_search_latest.json"
   ```
 
 - **api**: Start the FastAPI server for the web interface
   ```bash
-  python main.py api --port 8000
+  python src/main.py api --port 8000
   ```
 
 - **all**: Run the entire job search, match, and analysis pipeline
   ```bash
-  python main.py all --terms "Software Engineer" --process-linkedin
+  python src/main.py all --terms "Software Engineer" --process-linkedin
   ```
 
 For detailed help on any command:
 ```bash
-python main.py [command] --help
+python src/main.py [command] --help
 ```
       ```  
       Each non-comment line should follow this CSV-style format:
@@ -202,12 +202,13 @@ python main.py [command] --help
 
 ### Command Line Interface
 
+
 #### Running Job Search & Matching
 
-The main script for running job searches and generating optimized documents is:
+The main script for running job searches and generating optimized documents is now located in `src/`:
 
 ```bash
-python run_job_search.py [options]
+python src/run_job_search.py [options]
 ```
 
 Options include:
@@ -223,13 +224,13 @@ Options include:
 Examples:
 ```bash
 # Run a full search with cover letters
-python run_job_search.py --terms "Python Developer" --with-cover-letter
+python src/run_job_search.py --terms "Python Developer" --with-cover-letter
 
 # Test the pipeline in simulation mode
-python run_job_search.py --simulate --terms "DevOps Engineer" --with-cover-letter
+python src/run_job_search.py --simulate --terms "DevOps Engineer" --with-cover-letter
 
 # Only run matching on existing results
-python run_job_search.py --match-only --with-cover-letter
+python src/run_job_search.py --match-only --with-cover-letter
 ```
 
 For each matching job, the script will:
@@ -307,7 +308,7 @@ You can also use the web interface for a user-friendly experience:
 
 1. Run the web server:
 ```bash
-python run_web.py
+python src/run_web.py
 ```
 
 2. Open your browser and navigate to http://localhost:5000
@@ -380,28 +381,28 @@ This script (`simplified_linkedin_search.py`) provides a simplified way to searc
 
 ```bash
 # Basic usage with defaults (Software Developer jobs in Canada from last 48 hours)
-./simplified_linkedin_search.py
+python src/simplified_linkedin_search.py
 
 # Search for a different job title
-./simplified_linkedin_search.py --search "Data Scientist"
+python src/simplified_linkedin_search.py --search "Data Scientist"
 
 # Search in a different location
-./simplified_linkedin_search.py --location "Remote"
+python src/simplified_linkedin_search.py --location "Remote"
 
 # Search for very recent jobs (last 24 hours)
-./simplified_linkedin_search.py --recency 24
+python src/simplified_linkedin_search.py --recency 24
 
 # Get more job results
-./simplified_linkedin_search.py --max-jobs 10
+python src/simplified_linkedin_search.py --max-jobs 10
 
 # Specify a custom output path
-./simplified_linkedin_search.py --output "my_job_results.json"
+python src/simplified_linkedin_search.py --output "my_job_results.json"
 
 # Don't export as Markdown (JSON only)
-./simplified_linkedin_search.py --no-md
+python src/simplified_linkedin_search.py --no-md
 
 # Don't use LinkedIn guest API
-./simplified_linkedin_search.py --no-api
+python src/simplified_linkedin_search.py --no-api
 ```
 
 #### How It Works
@@ -443,25 +444,25 @@ This script works with the existing job_matcher project and can be incorporated 
 
 ```bash
 # Search in specific locations
-python run_job_search.py --locations "New York" "San Francisco" "Remote"
+python src/run_job_search.py --locations "New York" "San Francisco" "Remote"
 
 # Search in specific locations
-python run_job_search.py --locations "New York" "San Francisco" "Remote"
+python src/run_job_search.py --locations "New York" "San Francisco" "Remote"
 
 # Set recency to find only very recent job postings (last hour)
-python run_job_search.py --recency 1
+python src/run_job_search.py --recency 1
 
 # Combine parameters for more targeted searching
-python run_job_search.py --terms "DevOps Engineer" --locations "Remote" --recency 24
+python src/run_job_search.py --terms "DevOps Engineer" --locations "Remote" --recency 24
 
 # Run in simulation mode (no actual API calls)
-python run_job_search.py --simulate
+python src/run_job_search.py --simulate
 
 # Don't use Google Custom Search API (even if configured)
-python run_job_search.py --no-google
+python src/run_job_search.py --no-google
 
 # Only match existing job results with your resume
-python run_job_search.py --match-only
+python src/run_job_search.py --match-only
 ```
 
 ### LLM Provider Options

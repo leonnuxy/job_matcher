@@ -26,8 +26,8 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-# Updated import from optimizer.optimize
-from optimizer.optimize import optimize_resume_and_generate_cover_letter 
+# Updated import from the consolidated optimizer module
+from optimizer.optimizer import optimize_resume_and_generate_cover_letter
 # Imports from services
 from services.utils import save_optimized_resume, extract_text_between_delimiters # save_cover_letter (generic) removed
 from services.cover_letter import save_cover_letter # Specialized save for cover letters (includes sanitization)

@@ -8,6 +8,7 @@ import datetime
 from urllib.parse import urlparse
 from typing import Optional, List
 import sys
+from services.cover_letter import save_cover_letter  # Re-exported for backwards compatibility
 
 # Add parent directory to sys.path if running as a module
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -304,53 +305,189 @@ def extract_text_between_delimiters(text: str, start_delimiter: str, end_delimit
         
     return text[start_index:end_index].strip()
 
-def save_cover_letter(content: str, job_info: dict, out_dir: str = None, 
-                      include_timestamp: bool = True, custom_suffix: str = "") -> str:
+# Note: save_cover_letter function has been moved to services/cover_letter.py
+# Use the centralized version from there instead
+
+def normalize_text(text: str) -> str:
     """
-    Save a cover letter to a file with proper formatting.
+    Utility function to normalize text by converting to lowercase, removing excess whitespace,
+    and standardizing punctuation.
+    
+    This is a generic text processing utility that's different from the job-specific
+    optimizations in optimizer.py.
     
     Args:
-        content: The content of the cover letter.
-        job_info: A dictionary containing 'title' and 'company' for filename generation.
-        out_dir: Output directory path (optional).
-        include_timestamp: Whether to include a timestamp in the filename.
-        custom_suffix: Optional custom suffix for the filename, overrides job_info if provided.
+        text: The text to normalize
         
     Returns:
-        str: The path to the saved cover letter file.
+        Normalized text string
     """
-    if out_dir is None:
-        out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                              "data", "optimization_results") # Consistent with resume saving
-    os.makedirs(out_dir, exist_ok=True)
+    if not text:
+        return ""
     
-    timestamp_str = f"_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}" if include_timestamp else ""
+    # Convert to lowercase
+    text = text.lower()
     
-    file_suffix = ""
-    if custom_suffix:
-        file_suffix = custom_suffix.replace(" ", "_").replace("/", "_")
-    elif job_info and job_info.get("title") and job_info.get("company"):
-        job_title_safe = job_info["title"].replace(" ", "_").replace("/", "_")
-        company_safe = job_info["company"].replace(" ", "_").replace("/", "_")
-        file_suffix = f"{job_title_safe}_{company_safe}"
-    else:
-        file_suffix = "UnknownJob_UnknownCompany"
+    # Replace multiple spaces with a single space
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Standardize punctuation (remove most punctuation except periods and commas)
+    text = re.sub(r'[^\w\s\.,]', '', text)
+    
+    return text.strip()
 
-    filename = f"CoverLetter_{file_suffix}{timestamp_str}.md"
-    filepath = os.path.join(out_dir, filename)
+def extract_text_keywords(text: str, stop_words: Optional[List[str]] = None) -> List[str]:
+    """
+    Generic utility to extract keywords from text by removing stop words.
     
-    with open(filepath, "w", encoding='utf-8') as f:
-        f.write(content)
+    Note: This is different from optimizer.extract_keywords which uses frequency analysis.
+    This function focuses on filtering common words rather than ranking by frequency.
+    
+    Args:
+        text: The text to extract keywords from
+        stop_words: Optional list of stop words to exclude
         
-    # Create a symlink to the latest cover letter
-    latest_path = os.path.join(out_dir, "latest_cover_letter.md")
+    Returns:
+        List of keywords
+    """
+    if not text:
+        return []
+        
+    if stop_words is None:
+        # Common English stop words
+        stop_words = ["i", "me", "my", "myself", "we", "our", "ours", "ourselves", 
+                      "you", "your", "yours", "yourself", "yourselves", "he", "him", 
+                      "his", "himself", "she", "her", "hers", "herself", "it", "its", 
+                      "itself", "they", "them", "their", "theirs", "themselves", 
+                      "what", "which", "who", "whom", "this", "that", "these", 
+                      "those", "am", "is", "are", "was", "were", "be", "been", 
+                      "being", "have", "has", "had", "having", "do", "does", "did", 
+                      "doing", "a", "an", "the", "and", "but", "if", "or", "because", 
+                      "as", "until", "while", "of", "at", "by", "for", "with", 
+                      "about", "against", "between", "into", "through", "during", 
+                      "before", "after", "above", "below", "to", "from", "up", "down", 
+                      "in", "out", "on", "off", "over", "under", "again", "further", 
+                      "then", "once", "here", "there", "when", "where", "why", "how", 
+                      "all", "any", "both", "each", "few", "more", "most", "other", 
+                      "some", "such", "no", "nor", "not", "only", "own", "same", "so", 
+                      "than", "too", "very", "s", "t", "can", "will", "just", "don", 
+                      "should", "now"]
+    
+    # Normalize text
+    normalized = normalize_text(text)
+    
+    # Split into words
+    words = re.findall(r'\b\w+\b', normalized)
+    
+    # Filter out stop words and very short words
+    keywords = [word for word in words if word not in stop_words and len(word) > 2]
+    
+    return keywords
+
+def compute_jaccard_similarity(text1: str, text2: str) -> float:
+    """
+    Calculate similarity between two text strings using Jaccard similarity.
+    
+    Note: This is a generic text similarity function distinct from 
+    optimizer.calculate_match_score which is job-match specific.
+    
+    Args:
+        text1: First text string
+        text2: Second text string
+        
+    Returns:
+        Similarity score between 0.0 and 1.0
+    """
+    if not text1 or not text2:
+        return 0.0
+    
+    # Extract keywords from both texts
+    keywords1 = set(extract_text_keywords(text1))
+    keywords2 = set(extract_text_keywords(text2))
+    
+    # Calculate Jaccard similarity: intersection / union
+    intersection = keywords1.intersection(keywords2)
+    union = keywords1.union(keywords2)
+    
+    if not union:
+        return 0.0
+        
+    return len(intersection) / len(union)
+
+def extract_skills_from_text(text: str, skill_patterns: Optional[List[str]] = None) -> List[str]:
+    """
+    Extract technical skills from text using regex patterns.
+    
+    Args:
+        text: The text to extract skills from
+        skill_patterns: Optional list of regex patterns for skills
+        
+    Returns:
+        List of found skills
+    """
+    if not text:
+        return []
+    
+    if skill_patterns is None:
+        # Default patterns for common technical skills
+        skill_patterns = [
+            r'\b(?:python|java|javascript|typescript|c\+\+|ruby|go|rust|php|swift|kotlin)\b',
+            r'\b(?:react|angular|vue|node\.?js|express|django|flask|spring|rails)\b',
+            r'\b(?:html|css|sass|less|bootstrap|tailwind)\b',
+            r'\b(?:sql|mysql|postgresql|mongodb|firebase|dynamodb|redis|cassandra)\b',
+            r'\b(?:aws|azure|gcp|docker|kubernetes|terraform|jenkins|ci/cd)\b',
+            r'\b(?:git|github|gitlab|bitbucket)\b',
+            r'\b(?:agile|scrum|kanban|jira)\b',
+            r'\b(?:machine learning|deep learning|artificial intelligence|ai|ml|nlp)\b',
+            r'\b(?:data science|data analysis|statistics|pandas|numpy|tensorflow|pytorch)\b'
+        ]
+    
+    found_skills = []
+    normalized_text = text.lower()
+    
+    for pattern in skill_patterns:
+        matches = re.findall(pattern, normalized_text, re.IGNORECASE)
+        found_skills.extend([match.lower() for match in matches])
+    
+    # Remove duplicates and sort
+    return sorted(list(set(found_skills)))
+
+def read_text_file(filepath: str) -> Optional[str]:
+    """
+    Read text from a file with error handling.
+    
+    Args:
+        filepath: Path to the file to read
+        
+    Returns:
+        Text content or None if the file couldn't be read
+    """
     try:
-        if os.path.exists(latest_path):
-            os.remove(latest_path)
-        os.symlink(os.path.basename(filepath), latest_path)
+        with open(filepath, 'r', encoding='utf-8') as file:
+            return file.read()
     except Exception as e:
-        # Symlink creation is not critical, log a warning or ignore
-        # print(f"Warning: Could not create symlink for latest cover letter: {e}")
-        pass
+        print(f"Error reading file {filepath}: {e}")
+        return None
+
+def write_text_file(content: str, filepath: str, create_dirs: bool = True) -> bool:
+    """
+    Write text to a file with error handling.
+    
+    Args:
+        content: Text content to write
+        filepath: Path to write the file to
+        create_dirs: Whether to create parent directories if they don't exist
         
-    return filepath
+    Returns:
+        True if writing was successful, False otherwise
+    """
+    try:
+        if create_dirs:
+            os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
+        
+        with open(filepath, 'w', encoding='utf-8') as file:
+            file.write(content)
+        return True
+    except Exception as e:
+        print(f"Error writing to file {filepath}: {e}")
+        return False
