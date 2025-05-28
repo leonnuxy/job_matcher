@@ -1,0 +1,20 @@
+Job Title: Software Engineer
+Company: Innovatech Solutions
+Location: Calgary, AB
+
+Innovatech Solutions is seeking a motivated Software Engineer to join our dynamic team. The ideal candidate will have experience in Python, cloud technologies (AWS preferred), and a passion for building scalable software solutions.
+
+Responsibilities:
+- Design, develop, and deploy software applications.
+- Collaborate with cross-functional teams to define, design, and ship new features.
+- Write clean, maintainable, and efficient code.
+- Troubleshoot, debug, and upgrade existing systems.
+- Participate in code reviews and contribute to a high-quality codebase.
+
+Qualifications:
+- Bachelor's degree in Computer Science or related field.
+- 2+ years of experience in software development.
+- Proficiency in Python.
+- Experience with AWS or other cloud platforms.
+- Strong problem-solving skills.
+- Excellent communication and teamwork abilities.

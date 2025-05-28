@@ -1,0 +1,26 @@
+[
+  {
+    "title": "Senior Data Engineer",
+    "company": "Tech Solutions Inc.",
+    "location": "Calgary",
+    "description": "We are looking for an experienced Data Engineer to join our team. You will be responsible for designing, developing, and maintaining high-quality software solutions. Experience with Python, JavaScript, and cloud platforms required.",
+    "link": "https://example.com/job/1",
+    "date_posted": "2025-05-13"
+  },
+  {
+    "title": "Data Engineer",
+    "company": "Innovative Systems",
+    "location": "Calgary",
+    "description": "Join our growing team as a Data Engineer. You will work on cutting-edge projects using the latest technologies. Required skills include Python, TypeScript, React, and experience with AWS or Azure cloud services.",
+    "link": "https://example.com/job/2",
+    "date_posted": "2025-05-13"
+  },
+  {
+    "title": "Junior Data Engineer",
+    "company": "Digital Frontiers",
+    "location": "Calgary",
+    "description": "Great opportunity for a Data Engineer with 1-3 years of experience. You will collaborate with senior developers on web applications and services. Knowledge of Python, Django, and modern JavaScript frameworks is a plus.",
+    "link": "https://example.com/job/3",
+    "date_posted": "2025-05-13"
+  }
+]
