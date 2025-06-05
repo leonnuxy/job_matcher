@@ -21,10 +21,10 @@ def extract_job_description(job_text):
     Returns:
         str: The most relevant job description section, or an empty string if extraction fails.
     """
-    logging.info("Extracting job description")
+    logging.debug("Extracting job description")  # Changed to debug
 
     if not job_text or not job_text.strip():
-        logging.warning("Empty job text provided.")
+        logging.debug("Empty job text provided.")  # Changed to debug
         return ""
 
     try:

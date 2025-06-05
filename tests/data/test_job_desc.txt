@@ -1,0 +1,17 @@
+
+                Senior Python Developer
+                
+                Requirements:
+                - 5+ years of Python development experience
+                - Experience with Flask or Django web frameworks
+                - AWS cloud infrastructure knowledge
+                - REST API design and implementation
+                - SQL database experience
+                - CI/CD pipeline setup and maintenance
+                
+                Responsibilities:
+                - Develop and maintain Python-based microservices
+                - Collaborate with cross-functional teams
+                - Implement automated testing
+                - Participate in code reviews
+                

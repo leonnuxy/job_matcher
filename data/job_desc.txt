@@ -1,0 +1,31 @@
+About the job
+At Replicant, we believe AI should work for people, starting with customer service. That’s why we built a platform that helps contact centers resolve more requests, proactively identify issues, and improve agent performance with AI-powered conversation intelligence and AI agents that act like your best reps.
+
+Our AI agents handle millions of calls every month for Fortune 500 companies and high-growth innovators. From processing payments to booking appointments and authenticating users, they help customers get what they need instantly, 24/7. Meanwhile, our real-time conversation insights help contact center leaders coach better and improve every interaction.
+
+We’re leading the shift from legacy systems to AI-first service, powered by large language models (LLMs)and designed for enterprise scale, security, and empathy. If you’re excited by the potential of LLMs, voice AI, and building category-defining technology with a kind, ambitious team, you’ll love it here.
+
+We’re looking for a Software Engineer with strong development and communication skills to build and collaborate with designers to create world-class solutions for our customer-facing AI Agents. You will have the opportunity to improve our core services where necessary, implement clean communication between various internal and external systems, explore Conversational UIs, and help level up our growing team.
+
+What You'll Do
+
+Work directly with customers to architect, deploy, and improve cutting-edge AI Agents using Replicant’s platform
+Take end-to-end ownership over delivering exceptional customer experiences; from the customer implementation to the broader Replicant stack
+Collaborate with developers, QA, project teams, and customers to ensure our implementations exceed expectations
+Work as an integrated member of a fully remote, cross-functional Agile team in the Delivery organization
+Own the integration of Replicant’s solution with customer systems, including speccing and designing APIs (as required)
+Guide customers through technical decisions and tradeoffs, serving as a technical advisor to their teams
+Provide technical mentorship within the Delivery organization and be ready to assist when necessary
+Working with our internal tools and processes for creating AI Agents
+Participate in regular on-call rotations to support our systems
+Minimal travel required to go on-site for customer requirement analysis
+
+What You'll Bring
+
+B.S. or greater in Computer Science or a related field (math, physics, engineering) and strong CS fundamentals
+Proven track record with at least 1+ years of experience in JavaScript, Python, or TypeScript
+Strong team player - we work in small product teams that work very closely together and are constantly collaborating in order to move as fast as possible
+A strong sense of ownership and customer empathy — we work very closely with our internal teams and external customers in a high-paced environment. Maintaining positive working relationships with them is paramount to the success of our business.
+Excellent communication skills, comfortable speaking to external customers
+You are interested in exploring the nuance and aesthetic of conversations
+Experience working with REST APIs, Authentication (OAuth 2.0 and Basic)

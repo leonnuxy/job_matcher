@@ -69,25 +69,9 @@ class TestAPICallsFunctions(unittest.TestCase):
         self.assertIn('snippet', results[0])
         self.assertIn('company', results[0])
         
-    @patch('lib.api_calls.genai')
-    def test_optimize_resume_with_gemini(self, mock_genai):
-        """Test the resume optimization with Gemini AI"""
-        # Setup mock
-        mock_model = MagicMock()
-        mock_genai.configure.return_value = None
-        mock_genai.GenerativeModel.return_value = mock_model
-        mock_model.generate_content.return_value.text = "Optimized resume suggestions"
-        
-        resume_text = "My resume with skills"
-        job_description = "Job requires Python"
-        
-        # Call the function
-        result = api_calls.optimize_resume_with_gemini(resume_text, job_description)
-        
-        # Assertions
-        self.assertEqual(result, "Optimized resume suggestions")
-        mock_genai.GenerativeModel.assert_called_once()
-        mock_model.generate_content.assert_called_once()
+    # Note: The test_optimize_resume_with_gemini test has been removed
+    # as the function has been deprecated and removed.
+    # See tests/test_resume_optimizer_package.py for the replacement tests.
 
 class TestResumeTextLoading(unittest.TestCase):
     def setUp(self):

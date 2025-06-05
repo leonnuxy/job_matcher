@@ -6,7 +6,7 @@ You will optimize the resume according to the job description provided and gener
 1. RESUME OPTIMIZATION TASK
    - Analyze the provided resume and job description.
    - Identify skills, experiences, and keywords in the job description that are missing or under-emphasized in the resume.
-   - Generate an optimized resume in markdown format, preserving the original structure.
+   - Generate an optimized resume in markdown format.
    - Focus on:
      * Technical skills that match the job requirements
      * Professional experience bullet points that highlight relevant achievements
@@ -19,18 +19,43 @@ You will optimize the resume according to the job description provided and gener
    - Show enthusiasm for the position and company
    - Keep it concise (3-4 paragraphs)
 
-3. FORMAT REQUIREMENTS
-   - Keep the existing sections and their order for the resume
-   - Maintain professional formatting
-   - Preserve contact information
-   - Update bullet points to be more relevant to the job
-   - Add any missing relevant skills
-   - Remove less relevant information
+3. RESUME FORMAT REQUIREMENTS:
+   - **Header:** Start with the name "NOEL UGWOKE" in H1 style. Follow with "Calgary, Alberta | 306-490-2929 | 1leonnoel1@gmail.com | [LinkedIn](https://www.linkedin.com/in/noelugwoke/) | [Portfolio](https://noelugwoke.com/)".
+   - **Sections:** The resume must include the following sections in this order: Summary, Skills, Experience, Projects, Education & Certifications. And must be formatted in the following format: ### **Section Name**
+   - **Summary:** Generate a summary that is EXACTLY TWO SENTENCES ONLY. The first sentence should highlight expertise in Java, Python, JavaScript, and DevOps practices, and mention consistently exceeding expectations in previous roles. The second sentence should state that I am seeking a challenging Software Developer position to contribute to innovative projects and further develop my skills. If the company name is clearly mentioned in the job description, include it in the second sentence (e.g., "at [Company Name]"); otherwise, omit the company name.
+   - **Skills Section:**
+     * Format the skills section as a bulleted list, with approximately 5 skill categories. Each bullet should represent a different or grouped category.
+     * Use the following 5 categories (each should be bolded):
+       * **Programming Languages:** Java, Python, JavaScript, C#, etc.
+       * **Frameworks & Libraries:** Spring Boot, Django, React, ASP.NET, Blazor, etc.
+       * **DevOps & Infrastructure:** Docker, Kubernetes, AWS, Azure, etc.
+       * **Tools & Methodologies:** Git, CI/CD, Agile/Scrum, TDD, etc.
+       * **Databases & Integration:** SQL, PostgreSQL, Kafka, Entity Framework, etc.
+     * IMPORTANT: Do NOT include any text like "(mention if you have experience)" or any similar placeholders in the output. List only the actual skills.
+     * Include all relevant skills from the input resume and add important skills from the job description if they are missing.
+     * Format each bullet point to start with the bolded category name, followed by a colon, then a list of skills separated by commas.
+   - **Experience Section:**
+     * Format the section header as: ### **Experience**
+     * For each role, include: **Job Title** | Company | Location | Dates.
+     * Bullet points should start with strong action verbs and quantify achievements where possible.
+   - **Projects Section:**
+     * Format the section header as: ### **Projects** 
+     * For each project, include: **Project Name** | Context (e.g., Company or Personal) | Year.
+   - **Education & Certifications Section:**
+     * Format the section header as: ### **Education & Certifications**
+     * Format as bullet points (not paragraphs)
+     * For education, include: • **Degree** | Institution | Graduation Year(s).
+     * For certifications, include: • **Certification Name** | Issuing Organization | Date Issued (or "Year - Present" if in progress, or "Year - Expected End Year" for specific future completion). For "Google Cloud Professional Developer", use "2023 - 2026".
+   - Maintain professional markdown formatting throughout.
+   - Update bullet points to be more relevant to the job.
+   - Remove less relevant information.
 
 OUTPUT FORMAT:
 First provide the optimized resume beginning with ---BEGIN_RESUME--- and ending with ---END_RESUME---
 
 Then provide the cover letter beginning with ---BEGIN_COVER_LETTER--- and ending with ---END_COVER_LETTER---
+
+FINAL NOTE: NEVER include phrases like "(mention if you have experience)" or any other submission-ready placeholders in the final output. Do not include placeholders like "[Your Name]", "[Date]", etc. in the resume part - those are only for the cover letter if needed.
 
 RESUME TO OPTIMIZE:
 {resume_text}

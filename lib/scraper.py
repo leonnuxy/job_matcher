@@ -70,6 +70,11 @@ def extract_job_details(job_url):
     Returns:
         dict: Detailed job information including description, requirements, and location
     """
+    # Skip Indeed URLs as they block scraping
+    if "indeed" in job_url.lower():
+        logging.info(f"Skipping Indeed URL: {job_url} - Indeed blocks scraping")
+        return {}
+        
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'

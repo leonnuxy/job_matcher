@@ -17,10 +17,10 @@ def extract_job_location(job_text):
     Returns:
         str: The extracted location or None if not found.
     """
-    logging.info("Extracting job location")
+    logging.debug("Extracting job location")  # Changed to debug
 
     if not job_text or not job_text.strip():
-        logging.warning("Empty job text provided for location extraction.")
+        logging.debug("Empty job text provided for location extraction.")  # Changed to debug
         return None
 
     try:

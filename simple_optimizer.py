@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 """
 Simple script to test the resume optimizer with Gemini API.
+
+NOTE: This script is maintained for backward compatibility.
+New code should use the resume_optimizer package directly:
+    from resume_optimizer import optimize_resume
+    result = optimize_resume(resume_text, job_description)
+
+Or for full document generation:
+    from lib.optimization_utils import generate_optimized_documents
+    resume, cover_letter, raw_response = generate_optimized_documents(resume_text, job_description)
 """
 
 import os
@@ -11,7 +20,8 @@ from datetime import datetime
 # Add parent directory to path to import the lib modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from lib.api_calls import optimize_resume_with_gemini
+# Import the centralized utility function instead of the deprecated function
+from lib.optimization_utils import generate_optimized_documents
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -32,10 +42,10 @@ def optimize_resume_test():
         with open(job_desc_path, 'r') as file:
             job_description = file.read()
         
-        logging.info("Files loaded successfully. Calling optimize_resume_with_gemini...")
+        logging.info("Files loaded successfully. Calling optimization utility...")
         
-        # Call the optimization function
-        optimization_result = optimize_resume_with_gemini(resume_text, job_description)
+        # Call the optimization function (use the utility that returns raw response as 3rd item)
+        _, _, optimization_result = generate_optimized_documents(resume_text, job_description)
         
         # Create output file with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

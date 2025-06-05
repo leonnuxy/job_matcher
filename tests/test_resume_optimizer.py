@@ -34,32 +34,46 @@ class TestResumeOptimizer(unittest.TestCase):
         - Strong understanding of Git and CI/CD
         """
 
-    @patch('lib.api_calls.genai')
-    def test_optimize_resume_with_gemini(self, mock_genai):
+    @patch('lib.optimization_utils.genai')
+    def test_generate_optimized_documents(self, mock_genai):
         """Test that Gemini AI integration works for resume optimization"""
         # Set up mock response
+        from lib.optimization_utils import generate_optimized_documents
+        
         mock_model = MagicMock()
         mock_genai.configure.return_value = None
         mock_genai.GenerativeModel.return_value = mock_model
         mock_response = MagicMock()
-        mock_response.text = "1. Add Django experience\n2. Highlight AWS knowledge\n3. Emphasize Python skills"
+        
+        # Mock a response with delimiters
+        mock_response.text = """Some text before
+        ---BEGIN_RESUME---
+        John Doe Resume
+        ---END_RESUME---
+        
+        Some text in between
+        
+        ---BEGIN_COVER_LETTER---
+        Cover letter content
+        ---END_COVER_LETTER---
+        
+        Some text after
+        """
+        
         mock_model.generate_content.return_value = mock_response
         
         # Call the function
-        result = api_calls.optimize_resume_with_gemini(self.resume_text, self.job_description)
+        resume, cover_letter, raw_response = generate_optimized_documents(self.resume_text, self.job_description)
         
         # Check that the function called the AI model correctly
         mock_genai.configure.assert_called_once()
-        mock_genai.GenerativeModel.assert_called_once_with('gemini-pro')
+        mock_genai.GenerativeModel.assert_called_once()
         mock_model.generate_content.assert_called_once()
         
-        # Check that the prompt included both resume and job description
-        call_args = mock_model.generate_content.call_args[0][0]
-        self.assertIn("RESUME:", call_args)
-        self.assertIn("JOB DESCRIPTION:", call_args)
-        
-        # Check the result
-        self.assertEqual(result, "1. Add Django experience\n2. Highlight AWS knowledge\n3. Emphasize Python skills")
+        # Check the results
+        self.assertEqual(resume.strip(), "John Doe Resume")
+        self.assertEqual(cover_letter.strip(), "Cover letter content")
+        self.assertEqual(raw_response, mock_response.text)
         
     def test_real_resume_optimization(self):
         """Integration test with real files if available"""
@@ -84,9 +98,9 @@ class TestResumeOptimizer(unittest.TestCase):
         with open(resume_path, 'r') as f:
             resume_text = f.read()
         
-        # Mock the AI function to avoid actual API calls
-        with patch('lib.api_calls.optimize_resume_with_gemini') as mock_ai:
-            mock_ai.return_value = "Mocked AI optimization response"
+        # Mock the optimization utility to avoid actual API calls
+        with patch('lib.optimization_utils.generate_optimized_documents') as mock_util:
+            mock_util.return_value = ("Mocked resume", "Mocked cover letter", "Mocked raw response")
             
             # Run basic extraction to verify functionality
             resume_skills = resume_parser.extract_resume_skills(resume_text)

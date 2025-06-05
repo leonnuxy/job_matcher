@@ -23,7 +23,7 @@ def main():
         env["PYTHONPATH"] = project_root
     
     # Construct the command to run main.py
-    main_script = os.path.join(project_root, "src", "main.py")
+    main_script = os.path.join(project_root, "main.py")
     cmd = [sys.executable, main_script] + sys.argv[1:]
     
     # Execute the command with the modified environment

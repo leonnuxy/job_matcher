@@ -1,0 +1,27 @@
+{
+  "name": "restaurant-website",
+  "version": "1.0.0",
+  "description": "Restaurant website with MD to PDF conversion utility",
+  "main": "index.html",
+  "scripts": {
+    "md-to-pdf": "node md-to-pdf.js",
+    "md-to-pdf-no-pup": "node md_to_pdf_no_pup.js",
+    "convert-resume": "node md-to-pdf.js resume.md",
+    "convert-resume-no-pup": "node md_to_pdf_no_pup.js resume.md"
+  },
+  "dependencies": {
+    "highlight.js": "^11.11.1",
+    "html-pdf": "^3.0.1",
+    "markdown-it": "^14.1.0",
+    "markdown-pdf": "^10.0.0",
+    "puppeteer": "^22.15.0"
+  },
+  "keywords": [
+    "restaurant",
+    "website",
+    "markdown",
+    "pdf"
+  ],
+  "author": "",
+  "license": "MIT"
+}

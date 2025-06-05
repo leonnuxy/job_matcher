@@ -26,10 +26,10 @@ def extract_job_requirements(job_text):
     Returns:
         list: A sorted list of potential requirement keywords/phrases.
     """
-    logging.info("Extracting job requirements")
+    logging.debug("Extracting job requirements")  # Changed to debug
 
     if not job_text or not job_text.strip():
-        logging.warning("Empty job text provided for requirements extraction.")
+        logging.debug("Empty job text provided for requirements extraction.")  # Changed to debug
         return []
 
     try:

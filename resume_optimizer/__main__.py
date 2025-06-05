@@ -1,25 +1,21 @@
 """
 Main entry point for the resume_optimizer package.
 Allows the package to be run directly with `python -m resume_optimizer`.
+
+This redirects to the CLI module for consistent interface.
 """
 
-import os
 import sys
-import argparse
-import json
-from pathlib import Path
-from datetime import datetime
-
-from .optimizer import optimize_resume, OptimizerError
-
+from .cli import cli_main
 
 def main():
     """
-    Run the resume optimizer from the command line.
+    Run the resume optimizer CLI.
     
     Usage:
-        python -m resume_optimizer resume.txt job_description.txt [--output output.json]
+        python -m resume_optimizer <job_description_file> [--resume resume.txt] [--output-dir output_dir]
     """
+    sys.exit(cli_main())
     parser = argparse.ArgumentParser(description="Optimize a resume based on a job description")
     parser.add_argument("resume", help="Path to the resume text file")
     parser.add_argument("job_description", help="Path to the job description text file")

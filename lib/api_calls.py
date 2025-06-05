@@ -109,55 +109,6 @@ def search_jobs(search_term, max_results=10, max_age_hours=24):
         logging.error(f"Unexpected error in search_jobs: {e}")
     return []
 
-
-def optimize_resume_with_gemini(resume_text, job_description):
-    """
-    Use Google's Gemini AI to optimize a resume for a specific job description.
-    
-    Args:
-        resume_text (str): The text content of the resume
-        job_description (str): The text content of the job description
-        
-    Returns:
-        str: Optimization suggestions for the resume
-    """
-    try:
-        # Configure the Gemini API
-        genai.configure(api_key=GEMINI_API_KEY)
-        
-        # Use a model we know exists from our previous test
-        model_name = "models/gemini-1.5-flash"
-        logging.info(f"Using Gemini model: {model_name}")
-        
-        model = genai.GenerativeModel(model_name)
-        
-        # Create the prompt
-        prompt = f"""
-        As an expert resume optimizer, analyze the resume and job description below.
-        Provide specific, actionable suggestions to improve the resume to better match the job requirements.
-        Focus on:
-        1. Skills alignment - identify missing skills that should be highlighted
-        2. Experience framing - how to better present existing experience
-        3. Keywords optimization - specific terms to include
-        4. Formatting suggestions - if applicable
-        
-        RESUME:
-        {resume_text}
-        
-        JOB DESCRIPTION:
-        {job_description}
-        
-        Provide your response as a structured list of suggestions with clear, specific changes.
-        """
-        
-        # Generate content with minimal configuration
-        response = model.generate_content(prompt)
-        
-        # Log success
-        logging.info("Resume optimization completed successfully")
-        
-        return response.text
-        
-    except Exception as e:
-        logging.error(f"Error optimizing resume with Gemini: {e}")
-        return f"Resume optimization failed: {str(e)}"
+# The optimize_resume_with_gemini function has been removed.
+# Please use lib.optimization_utils.generate_optimized_documents() instead.
+# Or for more robust functionality, use resume_optimizer.optimize_resume().

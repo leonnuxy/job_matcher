@@ -9,7 +9,7 @@ import logging
 from typing import Dict, Any, Optional
 import google.generativeai as genai
 from google.api_core import exceptions, retry
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 from .config import (
     MODEL_NAME,
@@ -73,7 +73,7 @@ def _is_retriable_error(exception):
 @retry(
     stop=stop_after_attempt(MAX_RETRIES),
     wait=wait_exponential(multiplier=BACKOFF_FACTOR, min=1, max=10),
-    retry=retry_if_exception_type(_is_retriable_error),
+    retry=retry_if_exception(_is_retriable_error),
     reraise=True
 )
 def call_model(prompt: str) -> str:

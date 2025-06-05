@@ -1,0 +1,18 @@
+
+                JOHN DOE
+                Software Engineer
+                john.doe@email.com | (123) 456-7890 | linkedin.com/in/johndoe
+                
+                SKILLS
+                Programming: Python, JavaScript, React, HTML, CSS
+                Tools: Git, Docker, VS Code, Jira
+                
+                EXPERIENCE
+                Software Engineer, ABC Tech
+                May 2020 - Present
+                - Developed web applications using React and Node.js
+                - Improved application performance by 25% through code optimization
+                
+                EDUCATION
+                Bachelor of Science in Computer Science, University of Technology, 2017
+                

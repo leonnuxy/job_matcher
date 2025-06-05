@@ -1,0 +1,24 @@
+Software Engineer - Python Focus
+
+We are looking for a skilled Software Engineer with strong Python experience to join our growing team.
+
+Requirements:
+- 3+ years of Python development experience
+- Experience with Django or Flask frameworks
+- Knowledge of PostgreSQL and SQL
+- REST API development experience
+- Git version control
+- Unit testing experience
+
+Nice to have:
+- Docker containerization experience
+- AWS cloud platform knowledge
+- Redis caching
+- Celery task queue
+
+Responsibilities:
+- Develop and maintain Python web applications
+- Write clean, maintainable code
+- Collaborate with cross-functional teams
+- Participate in code reviews
+- Write comprehensive unit tests

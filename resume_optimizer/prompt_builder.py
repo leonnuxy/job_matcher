@@ -6,9 +6,16 @@ This module handles loading and constructing prompts for the resume optimization
 
 import os
 import json
+import logging
 from typing import Dict, Any
 
-# Default prompt template
+# Import the centralized prompt file path
+from config import PROMPT_FILE_PATH
+
+# Logger for this module
+logger = logging.getLogger(__name__)
+
+# Default prompt template (fallback if file doesn't exist)
 DEFAULT_PROMPT_TEMPLATE = """
 As an expert resume optimizer, analyze the resume and job description below.
 Provide specific, actionable suggestions to improve the resume to better match the job requirements.
@@ -45,11 +52,17 @@ def load_prompt_template() -> str:
     Returns:
         str: The prompt template string.
     """
-    # Path to a YAML/JSON prompt template if we want to load from file
-    # template_path = os.path.join(os.path.dirname(__file__), "prompt_template.yaml")
+    try:
+        if os.path.exists(PROMPT_FILE_PATH):
+            logger.info(f"Loading prompt template from: {PROMPT_FILE_PATH}")
+            with open(PROMPT_FILE_PATH, 'r', encoding='utf-8') as file:
+                return file.read()
+        else:
+            logger.warning(f"Prompt file not found at: {PROMPT_FILE_PATH}. Using default template.")
+    except Exception as e:
+        logger.error(f"Error loading prompt template: {e}. Using default template.")
     
-    # For now, just return the default template
-    # In a future version, we might load from file if it exists
+    # Return default template if file loading fails
     return DEFAULT_PROMPT_TEMPLATE
 
 

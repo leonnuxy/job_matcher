@@ -87,7 +87,10 @@ def optimize_resume(resume_text, job_description):
     
     # Get AI-powered optimization if available
     try:
-        ai_suggestions = api_calls.optimize_resume_with_gemini(resume_text, job_description)
+        # Use the optimization utility instead of deprecated function
+        from lib.optimization_utils import generate_optimized_documents
+        _, _, raw_response = generate_optimized_documents(resume_text, job_description)
+        ai_suggestions = raw_response if raw_response else "No optimization result available."
     except Exception as e:
         logging.error(f"AI optimization failed: {e}")
         ai_suggestions = "AI optimization unavailable at this time."

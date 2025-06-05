@@ -30,8 +30,12 @@ MAX_JOB_AGE_HOURS = int(os.getenv('MAX_JOB_AGE_HOURS', 24))
 MAX_SEARCH_RESULTS = int(os.getenv('MAX_SEARCH_RESULTS', 10))
 
 # Paths configuration
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'results')
+# Assuming config.py is in the project root directory
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
+RESULTS_DIR = os.path.join(PROJECT_ROOT, 'results')
+PROMPT_FILE_PATH = os.path.join(PROJECT_ROOT, 'prompt.txt') # Centralize prompt file path
 
 # Ensure directories exist
+# DATA_DIR might not need to be created here if it's expected to exist with inputs
 os.makedirs(RESULTS_DIR, exist_ok=True)
